@@ -36,7 +36,7 @@ func TestService(t *testing.T) {
 	_assert(mType != nil, "wrong Method, Sum shouldn't nil")
 }
 
-func TestMethodType_Call(t *testing.T) {  
+func TestMethodType_Call(t *testing.T) {
 	var foo Foo
 	s := newService(&foo)
 	mType := s.method["Sum"]

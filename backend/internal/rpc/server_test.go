@@ -1,11 +1,9 @@
 package rpc
 
 import (
-	"encoding/json"
-	"fmt"
-	"gotoraft/internal/codec"
 	"log"
 	"net"
+	"sync"
 	"testing"
 	"time"
 )
@@ -22,37 +20,45 @@ func TestServerAccept(t *testing.T) {
 }
 
 func startServer(addr chan string) {
-	lis, err := net.Listen("tcp", ":0")
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+	var foo Foo
+	if err := Register(&foo); err != nil {
+		log.Fatal("register error:", err)
 	}
-	addr <- lis.Addr().String()
-	Accept(lis)
+	// pick a free port
+	l, err := net.Listen("tcp", ":0")
+	if err != nil {
+		log.Fatal("network error:", err)
+	}
+	log.Println("start rpc server on", l.Addr())
+	addr <- l.Addr().String()
+	Accept(l)
 }
 
 func TestServer(t *testing.T) {
+	log.SetFlags(0)
 	addr := make(chan string)
 	go startServer(addr)
 
-	conn, err := net.Dial("tcp", <-addr)
+	client, err := Dial("tcp", <-addr)
 	if err != nil {
-		t.Fatalf("failed to dial: %v", err)
+		t.Fatal("dialing error:", err)
 	}
-	defer conn.Close()
+	defer func() { _ = client.Close() }()
 
 	time.Sleep(time.Second)
 
-	_ = json.NewEncoder(conn).Encode(DefaultOption)
-	cc := codec.NewGobCodec(conn)
+	var wg sync.WaitGroup
 	for i := 0; i < 5; i++ {
-		h := &codec.Header{
-			ServiceMethod: "Foo.Sum",
-			Seq:           uint64(i),
-		}
-		_ = cc.Write(h, fmt.Sprintf("rpc req %d", h.Seq))
-		_ = cc.ReadHeader(h)
-		var reply string
-		_ = cc.ReadBody(&reply)
-		log.Println("reply:", reply)
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			args := &Args{Num1: i, Num2: i * i}
+			var reply int
+			if err := client.Call("Foo.Sum", args, &reply); err != nil {
+				log.Fatal("call Foo.Sum error:", err)
+			}
+			log.Printf("%d + %d = %d", args.Num1, args.Num2, reply)
+		}(i)
 	}
+	wg.Wait()
 }
