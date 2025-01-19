@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"log"
 	"math/rand"
+	"net/rpc"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -20,7 +21,6 @@ import (
 	crand "crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"gotoraft/internal/rpc"
 	"math/big"
 	"time"
 )

@@ -2,12 +2,12 @@ package raft
 
 import (
 	"context"
-	"gotoraft/internal/rpc"
+	"gotoraft/internal/foorpc"
 )
 
 // RPCClient 封装RPC客户端
 type RPCClient struct {
-	*rpc.Client
+	*foorpc.Client
 }
 
 // Call 封装RPC调用
