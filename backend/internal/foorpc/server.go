@@ -1,4 +1,4 @@
-package rpc
+package foorpc
 
 import (
 	"encoding/json"
@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/http"
 	"reflect"
 	"strings"
 	"sync"
@@ -15,17 +16,24 @@ import (
 )
 
 const (
-	DefaultRPCPath = "/_rpc_"
-	MagicNumber    = 0x3bef5c
+	MagicNumber = 0x3bef5c
 )
 
+const (
+	connected        = "200 Connected to Foo RPC"
+	defaultRPCPath   = "/_foorpc_"
+	defaultDebugPath = "/debug/foorpc"
+)
+
+// Option is the configuration of the RPC server
 type Option struct {
-	MagicNumber    uint64
+	MagicNumber    int
 	CodecType      codec.Type
 	ConnectTimeout time.Duration // 0 means no limit
 	HandleTimeout  time.Duration
 }
 
+// DefaultOption is the default configuration of the RPC server
 var DefaultOption = &Option{
 	MagicNumber:    MagicNumber,
 	CodecType:      codec.GobType,
@@ -33,13 +41,24 @@ var DefaultOption = &Option{
 	// HandleTimeout:  0,
 }
 
+// request stores all information of a call
+type request struct {
+	h            *codec.Header // header of request
+	argv, replyv reflect.Value // argv and replyv of request
+	mtype        *methodType
+	svc          *service
+}
+
+// Server represents an RPC Server.
 type Server struct {
 	// 服务注册表
 	serviceMap sync.Map
 }
 
+// DefaultServer is the default instance of *Server.
 var DefaultServer = NewServer()
 
+// NewServer returns a new Server.
 func NewServer() *Server {
 	return &Server{}
 }
@@ -53,34 +72,11 @@ func Register(revr any) error {
 // for each incoming connection.
 func Accept(lis net.Listener) { DefaultServer.Accept(lis) }
 
-func (server *Server) findService(serviceMethod string) (svc *service, mtype *methodType, err error) {
-	dot := strings.LastIndex(serviceMethod, ".")
-	if dot < 0 {
-		err = errors.New("rpc server: service/method request ill-formed: " + serviceMethod)
-		return
-	}
-	// 解析服务名和方法名
-	serviceName, methodName := serviceMethod[:dot], serviceMethod[dot+1:]
-	// 从服务注册表中获取服务
-	svci, ok := server.serviceMap.Load(serviceName)
-	if !ok {
-		err = errors.New("rpc server: can't find service " + serviceName)
-		return
-	}
-	// 解析服务
-	svc = svci.(*service)
-	mtype = svc.method[methodName]
-	if mtype == nil {
-		err = errors.New("rpc server: can't find method " + methodName)
-	}
-	return
-}
-
 // Register registers a new service and its methods
 func (server *Server) Register(rcvr any) error {
 	s := newService(rcvr)
 	if _, dup := server.serviceMap.LoadOrStore(s.name, s); dup {
-		return fmt.Errorf("rpc: service already defined: %s", s.name)
+		return errors.New("rpc: service already defined: " + s.name)
 	}
 	return nil
 }
@@ -99,12 +95,10 @@ func (s *Server) Accept(lis net.Listener) {
 }
 
 func (s *Server) ServeConn(conn net.Conn) {
-	defer func() {
-		_ = conn.Close()
-	}()
+	defer func() { _ = conn.Close() }()
 
 	var opt Option
-	// read options
+	// 读取客户端发送的Option信息
 	if err := json.NewDecoder(conn).Decode(&opt); err != nil {
 		log.Println("rpc server: options error: ", err)
 		return
@@ -150,12 +144,60 @@ func (server *Server) serveCodec(cc codec.Codec, opt Option) {
 	_ = cc.Close()
 }
 
-// request stores all information of a call
-type request struct {
-	h            *codec.Header // header of request
-	argv, replyv reflect.Value // argv and replyv of request
-	mtype        *methodType
-	svc          *service
+func (server *Server) findService(serviceMethod string) (svc *service, mtype *methodType, err error) {
+	dot := strings.LastIndex(serviceMethod, ".")
+	if dot < 0 {
+		err = errors.New("rpc server: service/method request ill-formed: " + serviceMethod)
+		return
+	}
+	// 解析服务名和方法名
+	serviceName, methodName := serviceMethod[:dot], serviceMethod[dot+1:]
+	// 从服务注册表中获取服务
+	svci, ok := server.serviceMap.Load(serviceName)
+	if !ok {
+		err = errors.New("rpc server: can't find service " + serviceName)
+		return
+	}
+	// 解析服务
+	svc = svci.(*service)
+	mtype = svc.method[methodName]
+	if mtype == nil {
+		err = errors.New("rpc server: can't find method " + methodName)
+	}
+	return
+}
+
+// ServeHTTP implements an http.Handler that answers RPC requests.
+func (server *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	if req.Method != "CONNECT" {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		_, _ = io.WriteString(w, "405 must CONNECT\n")
+		return
+	}
+	// 使用http.Hijacker从http.ResponseWriter中获取一个net.Conn
+	conn, _, err := w.(http.Hijacker).Hijack()
+	if err != nil {
+		log.Print("rpc hijacking ", req.RemoteAddr, ": ", err.Error())
+		return
+	}
+	// 发送连接成功的响应
+	_, _ = io.WriteString(conn, "HTTP/1.0 "+connected+"\n\n")
+	// 使用ServeConn处理连接
+	server.ServeConn(conn)
+}
+
+// HandleHTTP registers an HTTP handler for RPC messages on rpcPath.
+// It is still necessary to invoke http.Serve(), typically in a go statement.
+func (server *Server) HandleHTTP() {
+	http.Handle(defaultRPCPath, server)
+	http.Handle(defaultDebugPath, debugHTTP{server})
+	log.Println("rpc server debug path:", defaultDebugPath)
+}
+
+// HandleHTTP is a convenient approach for default server to register HTTP handlers
+func HandleHTTP() {
+	DefaultServer.HandleHTTP()
 }
 
 // readRequestHeader reads a request header
@@ -236,4 +278,14 @@ func (server *Server) handleRequest(cc codec.Codec, req *request, sending *sync.
 	case <-called:
 		<-sent
 	}
+}
+
+// DeleteServer removes a server from the network
+func (s *Server) DeleteServer(id int) {
+	s.serviceMap.Delete(fmt.Sprintf("server%d", id))
+}
+
+// AddServer adds a server to the network
+func (s *Server) AddServer(id int, service interface{}) {
+	s.serviceMap.Store(fmt.Sprintf("server%d", id), service)
 }

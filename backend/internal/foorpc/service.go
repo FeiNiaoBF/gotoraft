@@ -1,4 +1,4 @@
-package rpc
+package foorpc
 
 import (
 	"go/ast"
@@ -7,7 +7,6 @@ import (
 	"sync/atomic"
 )
 
-// 通过反射实现 service
 type methodType struct {
 	method    reflect.Method
 	ArgType   reflect.Type
@@ -21,15 +20,15 @@ func (m *methodType) NumCalls() uint64 {
 
 func (m *methodType) newArgv() reflect.Value {
 	var argv reflect.Value
-	// 指针类型
+	// arg may be a pointer type, or a value type
 	if m.ArgType.Kind() == reflect.Ptr {
 		argv = reflect.New(m.ArgType.Elem())
 	} else {
-		// 非指针类型
 		argv = reflect.New(m.ArgType).Elem()
 	}
 	return argv
 }
+
 func (m *methodType) newReplyv() reflect.Value {
 	// reply must be a pointer type
 	replyv := reflect.New(m.ReplyType.Elem())
@@ -66,15 +65,12 @@ func (s *service) registerMethods() {
 	for i := 0; i < s.typ.NumMethod(); i++ {
 		method := s.typ.Method(i)
 		mType := method.Type
-		// 方法的参数和返回值, 必须为3个和1个, 第一个为self
 		if mType.NumIn() != 3 || mType.NumOut() != 1 {
 			continue
 		}
-		// 返回值必须为error
 		if mType.Out(0) != reflect.TypeOf((*error)(nil)).Elem() {
 			continue
 		}
-		// 参数和返回值必须为导出类型
 		argType, replyType := mType.In(1), mType.In(2)
 		if !isExportedOrBuiltinType(argType) || !isExportedOrBuiltinType(replyType) {
 			continue
@@ -88,11 +84,6 @@ func (s *service) registerMethods() {
 	}
 }
 
-func isExportedOrBuiltinType(t reflect.Type) bool {
-	return ast.IsExported(t.Name()) || t.PkgPath() == ""
-}
-
-// call is a helper function that calls the method with the given arguments and returns the error
 func (s *service) call(m *methodType, argv, replyv reflect.Value) error {
 	atomic.AddUint64(&m.numCalls, 1)
 	f := m.method.Func
@@ -101,4 +92,8 @@ func (s *service) call(m *methodType, argv, replyv reflect.Value) error {
 		return errInter.(error)
 	}
 	return nil
+}
+
+func isExportedOrBuiltinType(t reflect.Type) bool {
+	return ast.IsExported(t.Name()) || t.PkgPath() == ""
 }

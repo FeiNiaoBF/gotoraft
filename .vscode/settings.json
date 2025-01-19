@@ -6,4 +6,8 @@
     "go.coverOnSave": false,
     "go.coverOnSingleTestFile": true,
     "go.coverShowCounts": true,
+    "cSpell.words": [
+        "foorpc",
+        "gotoraft"
+    ],
 }

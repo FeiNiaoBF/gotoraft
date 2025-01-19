@@ -1,8 +1,10 @@
-package rpc
+package foorpc
 
 import (
 	"context"
 	"net"
+	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -57,11 +59,33 @@ func TestClient_Call(t *testing.T) {
 		_assert(err != nil && strings.Contains(err.Error(), ctx.Err().Error()), "expect a timeout error")
 	})
 	t.Run("server handle timeout", func(t *testing.T) {
-		client, _ := Dial("tcp", addr, &Option{
+		client, _ := DialHTTP("tcp", addr, &Option{
 			HandleTimeout: time.Second,
 		})
 		var reply int
 		err := client.Call(context.Background(), "Bar.Timeout", 1, &reply)
 		_assert(err != nil && strings.Contains(err.Error(), "handle timeout"), "expect a timeout error")
 	})
+}
+
+func TestXDial(t *testing.T) {
+	if runtime.GOOS == "linux" {
+		ch := make(chan error)
+		addr := "/tmp/geerpc.sock"
+		go func() {
+			_ = os.Remove(addr)
+			l, err := net.Listen("unix", addr)
+			if err != nil {
+				ch <- err
+				return
+			}
+			ch <- nil
+			Accept(l)
+		}()
+		if err := <-ch; err != nil {
+			t.Fatal("failed to listen unix socket:", err)
+		}
+		_, err := XDial("unix@" + addr)
+		_assert(err == nil, "failed to connect unix socket")
+	}
 }
