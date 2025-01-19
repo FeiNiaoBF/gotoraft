@@ -92,6 +92,7 @@ func isExportedOrBuiltinType(t reflect.Type) bool {
 	return ast.IsExported(t.Name()) || t.PkgPath() == ""
 }
 
+// call is a helper function that calls the method with the given arguments and returns the error
 func (s *service) call(m *methodType, argv, replyv reflect.Value) error {
 	atomic.AddUint64(&m.numCalls, 1)
 	f := m.method.Func
@@ -101,5 +102,3 @@ func (s *service) call(m *methodType, argv, replyv reflect.Value) error {
 	}
 	return nil
 }
-
-
