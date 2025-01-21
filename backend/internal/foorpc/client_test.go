@@ -52,18 +52,27 @@ func TestClient_Call(t *testing.T) {
 	addr := <-addrCh
 	time.Sleep(time.Second)
 	t.Run("client timeout", func(t *testing.T) {
-		client, _ := Dial("tcp", addr)
+		client, err := Dial("tcp", addr)
+		if err != nil {
+			t.Fatalf("dial error: %v", err)
+		}
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
 		var reply int
-		err := client.Call(ctx, "Bar.Timeout", 1, &reply)
+		err = client.Call(ctx, "Bar.Timeout", 1, &reply)
 		_assert(err != nil && strings.Contains(err.Error(), ctx.Err().Error()), "expect a timeout error")
 	})
 	t.Run("server handle timeout", func(t *testing.T) {
-		client, _ := DialHTTP("tcp", addr, &Option{
+		client, err := DialHTTP("tcp", addr, &Option{
 			HandleTimeout: time.Second,
 		})
+		if err != nil {
+			t.Fatalf("dialHTTP error: %v", err)
+		}
+		if client == nil {
+			t.Fatal("client is nil")
+		}
 		var reply int
-		err := client.Call(context.Background(), "Bar.Timeout", 1, &reply)
+		err = client.Call(context.Background(), "Bar.Timeout", 1, &reply)
 		_assert(err != nil && strings.Contains(err.Error(), "handle timeout"), "expect a timeout error")
 	})
 }

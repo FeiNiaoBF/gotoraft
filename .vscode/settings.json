@@ -8,6 +8,7 @@
     "go.coverShowCounts": true,
     "cSpell.words": [
         "foorpc",
-        "gotoraft"
+        "gotoraft",
+        "xclient"
     ],
 }

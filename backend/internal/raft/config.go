@@ -10,6 +10,7 @@ package raft
 
 import (
 	"bytes"
+	"gotoraft/internal/foorpc"
 	"log"
 	"math/rand"
 	"net/rpc"
@@ -43,7 +44,7 @@ type config struct {
 	mu          sync.Mutex
 	t           *testing.T
 	finished    int32
-	net         *rpc.Server
+	net         *foorpc.Server
 	n           int
 	rafts       []*Raft
 	applyErr    []string // from apply channel readers
@@ -74,7 +75,7 @@ func make_config(t *testing.T, n int, unreliable bool, snapshot bool) *config {
 	runtime.GOMAXPROCS(4)
 	cfg := &config{}
 	cfg.t = t
-	cfg.net = rpc.NewServer()
+	cfg.net = foorpc.NewServer()
 	cfg.n = n
 	cfg.applyErr = make([]string, cfg.n)
 	cfg.rafts = make([]*Raft, cfg.n)
