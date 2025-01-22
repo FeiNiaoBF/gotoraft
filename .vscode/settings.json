@@ -7,6 +7,8 @@
     "go.coverOnSingleTestFile": true,
     "go.coverShowCounts": true,
     "cSpell.words": [
+        "bigx",
+        "crand",
         "foorpc",
         "gotoraft",
         "xclient"

@@ -24,7 +24,7 @@ type Discovery interface {
 
 // MultiServerDiscovery is a discovery for multi servers without a registry center
 // it will try each server address in a round-robin manner
-type MultiServerDiscovery struct {
+type MultiServersDiscovery struct {
 	r       *rand.Rand   // random number generator
 	mu      sync.RWMutex // lock
 	servers []string     // server addresses
@@ -35,8 +35,8 @@ type MultiServerDiscovery struct {
 // @param servers: server addresses
 // @return: *MultiServerDiscovery
 // @note: servers is a list of server addresses
-func NewMultiServerDiscovery(servers []string) *MultiServerDiscovery {
-	d := &MultiServerDiscovery{
+func NewMultiServerDiscovery(servers []string) *MultiServersDiscovery {
+	d := &MultiServersDiscovery{
 		servers: servers,
 		r:       rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
@@ -44,17 +44,17 @@ func NewMultiServerDiscovery(servers []string) *MultiServerDiscovery {
 	return d
 }
 
-var _ Discovery = (*MultiServerDiscovery)(nil)
+var _ Discovery = (*MultiServersDiscovery)(nil)
 
 // Refresh doesn't make sense for MultiServerDiscovery
 // @return: error
 // @note: MultiServerDiscovery doesn't need to refresh
-func (m *MultiServerDiscovery) Refresh() error {
+func (m *MultiServersDiscovery) Refresh() error {
 	return nil
 }
 
 // Update updates the servers of discovery
-func (m *MultiServerDiscovery) Update(servers []string) error {
+func (m *MultiServersDiscovery) Update(servers []string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.servers = servers
@@ -64,7 +64,7 @@ func (m *MultiServerDiscovery) Update(servers []string) error {
 // Get a server according to mode
 // @param mode: select mode
 // @return: server address, error
-func (m *MultiServerDiscovery) Get(mode SelectMode) (string, error) {
+func (m *MultiServersDiscovery) Get(mode SelectMode) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	n := len(m.servers)
@@ -85,7 +85,7 @@ func (m *MultiServerDiscovery) Get(mode SelectMode) (string, error) {
 
 // GetAll returns all server addresses
 // @return: server addresses, error
-func (m *MultiServerDiscovery) GetAll() ([]string, error) {
+func (m *MultiServersDiscovery) GetAll() ([]string, error) {
 	// read lock
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -94,5 +94,3 @@ func (m *MultiServerDiscovery) GetAll() ([]string, error) {
 	copy(servers, m.servers)
 	return servers, nil
 }
-
-
