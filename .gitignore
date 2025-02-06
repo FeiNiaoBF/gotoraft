@@ -23,3 +23,16 @@ go.work.sum
 
 # env file
 .env
+
+# IDE files
+*.idea
+.vscode
+
+# 项目依赖
+./node_modules
+# windsurf rules
+.windsurfrules
+# 项目配置
+./config
+# 项目日志
+./logs

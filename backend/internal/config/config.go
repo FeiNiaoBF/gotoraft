@@ -78,7 +78,7 @@ func LoadConfig() (*Config, error) {
 	// 校验最终配置
 	if cfg.RaftNodeCount <= 0 {
 		return nil, fmt.Errorf("RaftNodeCount must be > 0")
-	}
+	} 
 
 	return cfg, nil
 }

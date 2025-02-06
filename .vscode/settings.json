@@ -1,7 +1,7 @@
 {
     "go.goroot": "C:\\Users\\Yeekox\\local\\envs\\go\\root\\go1.23",
     "files.autoSave": "afterDelay",
-    "editor.fontSize": 16,
+    "editor.fontSize": 18,
     "go.coverOnSingleTest": true,
     "go.coverOnSave": false,
     "go.coverOnSingleTestFile": true,
@@ -10,7 +10,9 @@
         "bigx",
         "crand",
         "foorpc",
+        "gonic",
         "gotoraft",
         "xclient"
     ],
+    "editor.renderWhitespace": "all",
 }
