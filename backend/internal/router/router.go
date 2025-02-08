@@ -2,7 +2,6 @@
 package router
 
 import (
-	"net/http"
 	"time"
 
 	"gotoraft/internal/handler"
@@ -45,61 +44,24 @@ func NewRouter(wsManager *websocket.Manager) *Router {
 // RegisterRoutes 注册所有路由
 func (r *Router) RegisterRoutes() {
 	// 基础健康检查路由
-	r.engine.GET("/ping", r.handlePing)
-	r.engine.GET("/health", r.handleHealth)
-
-	// API版本v1
-	v1 := r.engine.Group("/api/v1")
+	systemHandler := handler.NewSystemHandler()
+	api := r.engine.Group("/api")
 	{
-		// 系统信息路由组
-		systemGroup := v1.Group("/system")
+		systemGroup := api.Group("/system")
 		{
-			systemGroup.GET("/info", r.handleSystemInfo)
-			systemGroup.GET("/status", r.handleSystemStatus)
+			systemGroup.GET("/ping", systemHandler.HandlePing)
+			systemGroup.GET("/health", systemHandler.HandleHealth)
+			systemGroup.GET("/info", systemHandler.HandleSystemInfo)
+			systemGroup.GET("/status", systemHandler.HandleSystemStatus)
+			
 		}
 	}
 
+	// WebSocket路由
+	r.engine.GET("/ws", r.wsHandler.HandleConnection)
+
 	// 注册WebSocket路由
 	r.wsHandler.RegisterRoutes(r.engine)
-}
-
-// handlePing 处理ping请求
-func (r *Router) handlePing(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"message": "pong",
-		"time":    time.Now().Format(time.RFC3339),
-	})
-}
-
-// handleHealth 处理健康检查请求
-func (r *Router) handleHealth(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"status":    "healthy",
-		"timestamp": time.Now().Format(time.RFC3339),
-		"version":   "1.0.0", // 可以从配置或环境变量中获取
-	})
-}
-
-// handleSystemInfo 处理系统信息请求
-func (r *Router) handleSystemInfo(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"name":        "GoToRaft",
-		"version":     "1.0.0",
-		"environment": gin.Mode(),
-		"timestamp":   time.Now().Format(time.RFC3339),
-	})
-}
-
-// handleSystemStatus 处理系统状态请求
-func (r *Router) handleSystemStatus(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"status": "running",
-		"uptime": time.Now().Format(time.RFC3339),
-		"services": gin.H{
-			"api":     "healthy",
-			"storage": "healthy",
-		},
-	})
 }
 
 // Run 启动HTTP服务器

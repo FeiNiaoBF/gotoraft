@@ -101,7 +101,7 @@ func InitLogger() error {
 			timeBasedPath,
 			fmt.Sprintf("%s_%s.log",
 				filepath.Base(cfg.Filename[:len(cfg.Filename)-len(filepath.Ext(cfg.Filename))]), // 移除.log后缀
-				now.Format("15-04-05"), // 添加时分秒
+				now.Format("15-04"), // 添加时分
 			),
 		)
 
