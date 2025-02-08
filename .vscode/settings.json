@@ -12,6 +12,8 @@
         "foorpc",
         "gonic",
         "gotoraft",
+        "mapstructure",
+        "Upgrader",
         "xclient"
     ],
     "editor.renderWhitespace": "all",

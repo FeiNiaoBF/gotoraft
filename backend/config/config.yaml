@@ -1,0 +1,14 @@
+server:
+  port: 8080
+  host: '0.0.0.0'
+
+log:
+  level: 'info' # 日志级别: debug, info, warn, error
+  format: 'console' # 日志格式: json, console
+  output: 'both' # 输出位置: file, console, both
+  filename: 'logs/server.log' # 日志文件路径
+  max_size: 100 # 每个日志文件的最大大小，单位MB
+  max_age: 7 # 日志文件保留天数
+  max_backups: 10 # 保留的旧日志文件最大数量
+  compress: true # 是否压缩旧日志文件
+  time_format: '2006-01-02 15:04:05' # 时间格式
