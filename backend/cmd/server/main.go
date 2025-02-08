@@ -1,37 +1,35 @@
 package main
 
 import (
-	"fmt"
+	"flag"
 	"log"
 
-	"gotoraft/internal/config"
-	"gotoraft/server/handler"
-
-	"github.com/gin-gonic/gin"
+	"github.com/FeiNiaoBF/gotoraft/backend/internal/config"
+	"github.com/FeiNiaoBF/gotoraft/backend/internal/raft"
+	"github.com/FeiNiaoBF/gotoraft/backend/internal/server"
 )
 
-// 启动服务器 main
-
 func main() {
-	// 加载配置
+	// Command line flags
+	nodeID := flag.String("id", "node1", "Node ID")
+	addr := flag.String("addr", ":8080", "HTTP server address")
+	peers := flag.String("peers", "", "Comma-separated list of peer node IDs")
+	flag.Parse()
+
+	// Load configuration
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load config: %s\n", err)
+		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	r := gin.Default()
+	// Create Raft node
+	peerList := []string{} // TODO: Parse peers from command line
+	raftNode := raft.NewRaftNode(*nodeID, peerList)
 
-	// 设置路由
-	r.GET("/", handler.HomeHandler)
-	r.GET("/view", handler.RaftVisualizationHandler)
-	r.GET("/log", handler.RaftLogHandler)
-	r.GET("/health", handler.ServerHealthHandler)
-	r.GET("/ping", handler.PingHandler)
-
-	// 启动服务器
-	address := fmt.Sprintf(":%d", cfg.HTTPPort)
-	log.Printf("Starting server on %s\n", address)
-	if err := r.Run(address); err != nil {
-		log.Fatalf("Could not start server: %s\n", err)
+	// Create and start HTTP server
+	srv := server.NewServer(raftNode)
+	log.Printf("Starting server on %s\n", *addr)
+	if err := srv.Start(*addr); err != nil {
+		log.Fatalf("Server failed to start: %v", err)
 	}
 }

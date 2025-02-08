@@ -14,10 +14,10 @@ var upgrader = websocket.Upgrader{
 }
 
 type Handler struct {
-	controller *raft.RaftController
+	controller *raft.RaftNode
 }
 
-func NewHandler(controller *raft.RaftController) *Handler {
+func NewHandler(controller *raft.RaftNode) *Handler {
 	return &Handler{controller: controller}
 }
 

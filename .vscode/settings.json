@@ -15,4 +15,10 @@
         "xclient"
     ],
     "editor.renderWhitespace": "all",
+    "prettier.bracketSameLine": true,
+    "prettier.enableDebugLogs": true,
+    "prettier.jsxSingleQuote": true,
+    "prettier.singleAttributePerLine": true,
+    "prettier.singleQuote": true,
+    "prettier.withNodeModules": true,
 }

@@ -1,119 +1,99 @@
 package config
 
 import (
-	"flag"
-	"fmt"
 	"os"
-	"time"
+	"sync"
 
 	"gopkg.in/yaml.v2"
 )
 
-// 配置文件
-// 适用于整个项目的配置
-// 包括raft的配置，http的配置，websocket的配置
-
-// Config 用于配置整个服务
+// Config represents the application configuration
 type Config struct {
-	// HTTP 服务相关
-	HTTPPort        int    `yaml:"http_port"`        // HTTP 端口
-	WebSocketPath   string `yaml:"websocket_path"`   // WebSocket 端点
-	EnableWebSocket bool   `yaml:"enable_websocket"` // 是否开启 WebSocket
+	mu     sync.RWMutex
+	Config struct {
+		HTTPPort       int    `yaml:"http_port"`
+		WebsocketPath  string `yaml:"websocket_path"`
+		EnableWebsocket bool  `yaml:"enable_websocket"`
 
-	// Raft 相关
-	RaftNodeCount     int           `yaml:"raft_node_count"`     // Raft 节点数量
-	RaftElectionFixed time.Duration `yaml:"raft_election_fixed"` // 固定的选举超时（可使用随机值）
-	RaftHeartbeat     time.Duration `yaml:"raft_heartbeat"`      // 心跳间隔
+		Raft struct {
+			NodeCount           int     `yaml:"node_count"`
+			InitialLeader       string  `yaml:"initial_leader"`
+			ElectionTimeoutMin  int     `yaml:"election_timeout_min"`
+			ElectionTimeoutMax  int     `yaml:"election_timeout_max"`
+			HeartbeatInterval   int     `yaml:"heartbeat_interval"`
+			MaxLogEntries       int     `yaml:"max_log_entries"`
+			ReplicationBatchSize int    `yaml:"replication_batch_size"`
+			AnimationSpeed      float64 `yaml:"animation_speed"`
+			EnableNetworkDelay  bool    `yaml:"enable_network_delay"`
+			NetworkDelayMin     int     `yaml:"network_delay_min"`
+			NetworkDelayMax     int     `yaml:"network_delay_max"`
+		} `yaml:"raft"`
 
-	// 其他全局配置
-	DebugMode bool `yaml:"debug_mode"` // 是否开启调试模式
+		KVStore struct {
+			InitialData     map[string]string `yaml:"initial_data"`
+			MaxKeyLength    int              `yaml:"max_key_length"`
+			MaxValueLength  int              `yaml:"max_value_length"`
+			MaxEntries      int              `yaml:"max_entries"`
+			ReadDelay       int              `yaml:"read_delay"`
+			WriteDelay      int              `yaml:"write_delay"`
+		} `yaml:"kvstore"`
+
+		WebSocket struct {
+			PingInterval     int `yaml:"ping_interval"`
+			MaxMessageSize   int `yaml:"max_message_size"`
+			WriteBufferSize int `yaml:"write_buffer_size"`
+			ReadBufferSize  int `yaml:"read_buffer_size"`
+		} `yaml:"websocket"`
+	} `yaml:"config"`
 }
 
-// 默认配置
-var DefaultConfig = &Config{
-	HTTPPort:          8080,
-	WebSocketPath:     "/ws",
-	EnableWebSocket:   true,
-	RaftNodeCount:     3,
-	RaftElectionFixed: 1500 * time.Millisecond, // 1.5s
-	RaftHeartbeat:     100 * time.Millisecond,  // 0.1s
-	DebugMode:         true,
-}
+var (
+	config *Config
+	once   sync.Once
+)
 
-// LoadConfig 先尝试解析命令行参数，再尝试从环境变量/文件中加载
+// LoadConfig loads the configuration from the specified file
 func LoadConfig() (*Config, error) {
-	// 解析命令行参数
-	var (
-		configPath = flag.String("config", "", "Path to a YAML config file.")
-		nodeCount  = flag.Int("nodes", 3, "Number of Raft nodes.")
-		debugMode  = flag.Bool("debug", false, "Enable debug mode.")
-	)
-	flag.Parse()
+	once.Do(func() {
+		config = &Config{}
+	})
 
-	// 设置默认值
-	var cfg *Config
-	if flag.NArg() == 0 {
-		cfg = DefaultConfig
-	} else {
-		cfg = &Config{
-			HTTPPort:          8080,
-			WebSocketPath:     "/ws",
-			EnableWebSocket:   true,
-			RaftNodeCount:     *nodeCount,
-			RaftElectionFixed: 1500 * time.Millisecond, // 1.5s
-			RaftHeartbeat:     100 * time.Millisecond,  // 0.1s
-			DebugMode:         *debugMode,
-		}
-	}
-
-	// 如果指定了配置文件，则从文件中加载并覆盖默认值
-	if *configPath != "" {
-		fileCfg, err := loadFromYAML(*configPath)
-		if err != nil {
-			return nil, fmt.Errorf("loadFromYAML error: %v", err)
-		}
-		mergeConfig(cfg, fileCfg)
-	}
-
-	// 校验最终配置
-	if cfg.RaftNodeCount <= 0 {
-		return nil, fmt.Errorf("RaftNodeCount must be > 0")
-	} 
-
-	return cfg, nil
-}
-
-// loadFromYAML 从 YAML 文件中加载配置
-func loadFromYAML(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile("configs/env.yaml")
 	if err != nil {
 		return nil, err
 	}
-	var fileCfg Config
-	if err := yaml.Unmarshal(data, &fileCfg); err != nil {
+
+	config.mu.Lock()
+	defer config.mu.Unlock()
+
+	if err := yaml.Unmarshal(data, config); err != nil {
 		return nil, err
 	}
-	return &fileCfg, nil
+
+	return config, nil
 }
 
-// mergeConfig 将 fileCfg 中非零值/非空值合并到 cfg 中
-func mergeConfig(cfg, fileCfg *Config) {
-	if fileCfg.HTTPPort != 0 {
-		cfg.HTTPPort = fileCfg.HTTPPort
+// GetConfig returns the current configuration
+func GetConfig() *Config {
+	if config == nil {
+		LoadConfig()
 	}
-	if fileCfg.WebSocketPath != "" {
-		cfg.WebSocketPath = fileCfg.WebSocketPath
-	}
-	cfg.EnableWebSocket = fileCfg.EnableWebSocket
+	return config
+}
 
-	if fileCfg.RaftNodeCount != 0 {
-		cfg.RaftNodeCount = fileCfg.RaftNodeCount
+// UpdateConfig updates the configuration with new values
+func (c *Config) UpdateConfig(newConfig Config) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Update configuration values
+	c.Config = newConfig.Config
+
+	// Save to file
+	data, err := yaml.Marshal(c)
+	if err != nil {
+		return
 	}
-	if fileCfg.RaftElectionFixed != 0 {
-		cfg.RaftElectionFixed = fileCfg.RaftElectionFixed
-	}
-	if fileCfg.RaftHeartbeat != 0 {
-		cfg.RaftHeartbeat = fileCfg.RaftHeartbeat
-	}
-	cfg.DebugMode = fileCfg.DebugMode
+
+	os.WriteFile("configs/env.yaml", data, 0644)
 }
