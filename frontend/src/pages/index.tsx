@@ -7,6 +7,51 @@ import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
 import ErrorBoundary from '@/components/error-boundary';
 import LoadingSpinner from '@/components/loading-spinner';
+import { motion } from 'framer-motion';
+
+// 动画变体配置
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.3,
+      delayChildren: 0.2,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: 'easeOut',
+    },
+  },
+};
+
+const featureCardVariants = {
+  hidden: { opacity: 0, scale: 0.9 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: {
+      duration: 0.5,
+      ease: [0.43, 0.13, 0.23, 0.96],
+    },
+  },
+  hover: {
+    scale: 1.05,
+    boxShadow: '0 0 30px rgba(59,130,246,0.3)',
+    transition: {
+      duration: 0.3,
+      ease: 'easeInOut',
+    },
+  },
+};
 
 // 动态导入Raft的可视化组件
 const RaftVisualization = dynamic(
@@ -39,7 +84,7 @@ function Home() {
       <PageBgLayout />
 
       {/* Raft Visualization Demo*/}
-      <div className='fixed top-0 right-0 w-1/2 h-screen flex flex-col items-center justify-center'>
+      <div className='fixed top-0 right-0 w-1/2  h-screen flex flex-col items-center justify-center'>
         <ErrorBoundary
           fallback={
             <div className='text-red-500'>
@@ -59,21 +104,40 @@ function Home() {
       {/* Scrollable content */}
       <div className='w-1/2 pb-32'>
         <ScrollSection>
-          <div className='min-h-screen flex items-center'>
+          <motion.div
+            variants={containerVariants}
+            initial='hidden'
+            animate='visible'
+            className='min-h-screen flex items-center'>
             <div className='space-y-10 px-12'>
-              <div className='space-y-6'>
-                <div className='inline-block'>
-                  <p className='text-blue-400 font-semibold tracking-wide px-6 py-3 text-lg rounded-full bg-blue-500/10 border border-blue-500/40'>
+              <motion.div
+                variants={itemVariants}
+                className='space-y-6'>
+                <motion.div
+                  className='inline-block'
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}>
+                  <motion.p
+                    className='text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-teal-400 shadow-lg'
+                    initial={{ opacity: 0, x: -50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.8, ease: 'easeOut' }}>
                     {t('title')}
-                  </p>
-                </div>
-                <h1 className='text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-blue-200 leading-tight'>
+                  </motion.p>
+                </motion.div>
+                <motion.h2
+                  variants={itemVariants}
+                  className={`font-display text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200 leading-tight antialiased subpixel-antialiased`}>
                   {t('subtitle')}
-                </h1>
-                <p className='text-slate-300 text-xl leading-relaxed max-w-xl'>
+                </motion.h2>
+                <motion.p
+                  variants={itemVariants}
+                  className={`text-slate-300 text-xl md:text-2xl leading-relaxed max-w-xl antialiased ${
+                    t('currentLang') === 'zh' ? 'font-cn' : 'font-sans'
+                  }`}>
                   {t('description')}
-                </p>
-              </div>
+                </motion.p>
+              </motion.div>
 
               <div className='flex space-x-6'>
                 <button className='group relative px-8 py-4 text-lg bg-gradient-to-r from-blue-500 to-blue-600 rounded-full overflow-hidden transition-all duration-300 hover:shadow-[0_0_30px_rgba(59,130,246,0.5)]'>
@@ -87,24 +151,44 @@ function Home() {
                 </button>
               </div>
             </div>
-          </div>
+          </motion.div>
         </ScrollSection>
 
         <ScrollSection>
-          <div className='min-h-screen flex items-center'>
+          <motion.div
+            variants={containerVariants}
+            initial='hidden'
+            whileInView='visible'
+            viewport={{ once: true, amount: 0.3 }}
+            className='min-h-screen flex items-center'>
             <div className='space-y-8 px-12 max-w-xl'>
-              <h2 className='text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200'>
+              <motion.h2
+                variants={itemVariants}
+                className={`text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200 antialiased subpixel-antialiased ${
+                  t('currentLang') === 'zh'
+                    ? 'font-cn tracking-normal'
+                    : 'font-display tracking-wide'
+                }`}>
                 {t('processTitle')}
-              </h2>
-              <p className='text-xl text-slate-300'>
+              </motion.h2>
+              <motion.p
+                variants={itemVariants}
+                className={`text-slate-300 text-xl md:text-2xl leading-relaxed antialiased ${
+                  t('currentLang') === 'zh' ? 'font-cn' : 'font-sans'
+                }`}>
                 {t('leaderElectionDescription')}
-              </p>
+              </motion.p>
             </div>
-          </div>
+          </motion.div>
         </ScrollSection>
 
         <ScrollSection>
-          <div className='min-h-screen flex items-center'>
+          <motion.div
+            variants={containerVariants}
+            initial='hidden'
+            whileInView='visible'
+            viewport={{ once: true, amount: 0.3 }}
+            className='min-h-screen flex items-center'>
             <div className='space-y-12 px-12'>
               {[
                 {
@@ -120,19 +204,31 @@ function Home() {
                   description: t('safetyDescription'),
                 },
               ].map((feature, index) => (
-                <div
+                <motion.div
                   key={index}
-                  className='bg-slate-800/40 backdrop-blur-sm rounded-xl p-8 border border-slate-700/50 transition-all duration-300 hover:border-blue-500/30 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)]'>
-                  <h3 className='text-2xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200 mb-4'>
+                  variants={featureCardVariants}
+                  whileHover='hover'
+                  className='bg-slate-800/40 backdrop-blur-sm rounded-xl p-8 border border-slate-700/50'>
+                  <motion.h3
+                    variants={itemVariants}
+                    className={`text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200 mb-4 antialiased subpixel-antialiased ${
+                      t('currentLang') === 'zh'
+                        ? 'font-cn tracking-normal'
+                        : 'font-display tracking-wide'
+                    }`}>
                     {feature.title}
-                  </h3>
-                  <p className='text-slate-300 text-lg leading-relaxed'>
+                  </motion.h3>
+                  <motion.p
+                    variants={itemVariants}
+                    className={`text-slate-300 text-lg leading-relaxed antialiased ${
+                      t('currentLang') === 'zh' ? 'font-cn' : 'font-sans'
+                    }`}>
                     {feature.description}
-                  </p>
-                </div>
+                  </motion.p>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
         </ScrollSection>
       </div>
     </main>

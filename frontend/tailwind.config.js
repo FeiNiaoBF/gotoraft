@@ -6,6 +6,12 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-inter)', 'var(--font-noto-sans-sc)'],
+        mono: ['var(--font-roboto-mono)'],
+        display: ['var(--font-outfit)', 'var(--font-noto-sans-sc)'],
+        cn: ['var(--font-noto-sans-sc)'],
+      },
       animation: {
         'pulse-slow': 'pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },

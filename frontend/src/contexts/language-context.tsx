@@ -12,12 +12,12 @@ interface Translations {
 const translations: Translations = {
   // 第一页的内容
   title: {
-    en: 'Raft: Interactive Learning',
-    zh: 'Raft：交互式学习',
+    en: 'Raft Interactive Learning',
+    zh: 'Raft 交互式学习',
   },
   subtitle: {
-    en: 'Raft Visualization for Interactive Learning',
-    zh: 'Raft共识算法的可视化学习',
+    en: 'Raft Visualization',
+    zh: 'Raft共识算法的可视化',
   },
   raftVisualizationPlaceholder: {
     en: 'Interactive Raft Simulation',
@@ -28,8 +28,8 @@ const translations: Translations = {
     zh: 'Switch to English',
   },
   processTitle: {
-    en: 'Raft Visualization',
-    zh: 'Raft 可视化',
+    en: 'Raft Process',
+    zh: 'Raft 进程',
   },
   configureTitle: {
     en: 'Node Configuration',
