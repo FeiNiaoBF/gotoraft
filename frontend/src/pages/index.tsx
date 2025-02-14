@@ -8,7 +8,7 @@ import { Suspense } from 'react';
 import ErrorBoundary from '@/components/error-boundary';
 import LoadingSpinner from '@/components/loading-spinner';
 import { motion } from 'framer-motion';
-
+import PageBgLayout from '@/layout/page-bg-layout';
 // 动画变体配置
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -55,14 +55,15 @@ const featureCardVariants = {
 
 // 动态导入Raft的可视化组件
 const RaftVisualization = dynamic(
-  () => import('@/components/raft-demo/raft-visualization'),
+  () =>
+    import('@/components/raft-demo/raft-visualization').then(
+      (module) => module.default
+    ),
   {
+    ssr: false,
     loading: () => <LoadingSpinner />,
-    ssr: false, // 由于可视化组件可能依赖浏览器API，禁用SSR
   }
 );
-
-import PageBgLayout from '@/layout/page-bg-layout';
 
 function Home() {
   const { t } = useLanguage();
@@ -84,21 +85,17 @@ function Home() {
       <PageBgLayout />
 
       {/* Raft Visualization Demo*/}
-      <div className='fixed top-0 right-0 w-1/2  h-screen flex flex-col items-center justify-center'>
+      <div className='fixed top-0 right-0 w-1/2 h-screen flex flex-col items-center justify-center'>
         <ErrorBoundary
           fallback={
-            <div className='text-red-500'>
-              Something went wrong with the visualization
+            <div className='text-red-400 p-4 bg-red-900/20 rounded-lg'>
+              {t('visualizationError')}
             </div>
           }>
           <Suspense fallback={<LoadingSpinner />}>
             <RaftVisualization />
           </Suspense>
         </ErrorBoundary>
-        <div className='mt-4 text-center text-white'>
-          <p className='text-sm'>{t('nodeInstruction')}</p>
-          <p className='text-xs text-gray-400'>{t('nodeStates')}</p>
-        </div>
       </div>
 
       {/* Scrollable content */}
@@ -127,12 +124,14 @@ function Home() {
                 </motion.div>
                 <motion.h2
                   variants={itemVariants}
-                  className={`font-display text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200 leading-tight antialiased subpixel-antialiased`}>
+                  className={`font-display text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200 leading-tight ${
+                    t('currentLang') === 'zh' ? 'font-cn' : 'font-sans'
+                  }`}>
                   {t('subtitle')}
                 </motion.h2>
                 <motion.p
                   variants={itemVariants}
-                  className={`text-slate-300 text-xl md:text-2xl leading-relaxed max-w-xl antialiased ${
+                  className={`text-slate-300 text-xl md:text-2xl leading-relaxed max-w-xl ${
                     t('currentLang') === 'zh' ? 'font-cn' : 'font-sans'
                   }`}>
                   {t('description')}
@@ -164,7 +163,7 @@ function Home() {
             <div className='space-y-8 px-12 max-w-xl'>
               <motion.h2
                 variants={itemVariants}
-                className={`text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200 antialiased subpixel-antialiased ${
+                className={`text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200 ${
                   t('currentLang') === 'zh'
                     ? 'font-cn tracking-normal'
                     : 'font-display tracking-wide'
@@ -173,7 +172,7 @@ function Home() {
               </motion.h2>
               <motion.p
                 variants={itemVariants}
-                className={`text-slate-300 text-xl md:text-2xl leading-relaxed antialiased ${
+                className={`text-slate-300 text-xl md:text-2xl leading-relaxed ${
                   t('currentLang') === 'zh' ? 'font-cn' : 'font-sans'
                 }`}>
                 {t('leaderElectionDescription')}
@@ -211,7 +210,7 @@ function Home() {
                   className='bg-slate-800/40 backdrop-blur-sm rounded-xl p-8 border border-slate-700/50'>
                   <motion.h3
                     variants={itemVariants}
-                    className={`text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200 mb-4 antialiased subpixel-antialiased ${
+                    className={`text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200 mb-4 ${
                       t('currentLang') === 'zh'
                         ? 'font-cn tracking-normal'
                         : 'font-display tracking-wide'
@@ -220,7 +219,7 @@ function Home() {
                   </motion.h3>
                   <motion.p
                     variants={itemVariants}
-                    className={`text-slate-300 text-lg leading-relaxed antialiased ${
+                    className={`text-slate-300 text-lg leading-relaxed ${
                       t('currentLang') === 'zh' ? 'font-cn' : 'font-sans'
                     }`}>
                     {feature.description}

@@ -44,16 +44,20 @@ const translations: Translations = {
     zh: '性能分析',
   },
   helpTitle: {
-    en: 'Help ',
+    en: 'Help',
     zh: '帮助',
   },
   aboutTitle: {
-    en: 'About Raft',
-    zh: '关于 Raft',
+    en: 'About',
+    zh: '关于',
   },
   settingsTitle: {
     en: 'Settings',
     zh: '设置',
+  },
+  login: {
+    en: 'Sign In',
+    zh: '登录',
   },
   description: {
     en: 'Discover the core principles of the Raft distributed consensus algorithm through an interactive guide. Learn how leader election, log replication, and safety mechanisms ensure reliable distributed consensus.',
@@ -67,8 +71,20 @@ const translations: Translations = {
     en: 'Learn More',
     zh: '了解更多',
   },
+  // 在translations对象中添加
+  clickToInteract: {
+    en: 'Click nodes to switch leader/follower roles',
+    zh: '点击节点切换领导者/跟随者角色',
+  },
+  leaderFollowerTips: {
+    en: 'Leaders have glowing rings, followers maintain orbits',
+    zh: '带光环的为领导者，跟随者保持轨道运行',
+  },
+  visualizationError: {
+    en: 'Visualization failed to load, please refresh',
+    zh: '可视化加载失败，请刷新页面',
+  },
   // 第二页的内容
-
   leaderElectionDescription: {
     en: 'Learn how Raft uses a simple heartbeat and election process to select a leader when needed.',
     zh: '了解 Raft 如何通过简单的心跳和选举过程在需要时选出领导者。',

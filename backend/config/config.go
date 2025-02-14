@@ -11,13 +11,14 @@ import (
 )
 
 // Config 用于存储和管理配置
-// TODO: 可能需要加入更多Server的配置
+
 // `mapstructure` 是用来默认支持自动的蛇形命名（snake_case）到驼峰命名（CamelCase）的转换
 type Config struct {
 	Server *ServerConfig `mapstructure:"server"`
 	Log    *LogConfig    `mapstructure:"log"`
 }
 
+// TODO: 可能需要加入更多Server的配置
 // ServerConfig 服务器配置
 type ServerConfig struct {
 	Host string `mapstructure:"host"`

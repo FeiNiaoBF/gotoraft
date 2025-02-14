@@ -42,9 +42,37 @@ const linkVariants = {
   },
 };
 
+// 登录按钮动画
+const loginButtonVariants = {
+  hover: {
+    scale: 1.05,
+    boxShadow: '0 0 20px rgba(59,130,246,0.5)',
+  },
+  tap: {
+    scale: 0.95,
+  },
+  initial: {
+    opacity: 0,
+    x: 20,
+  },
+  animate: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      duration: 0.3,
+      ease: 'easeOut',
+    },
+  },
+};
+
 export function Navbar() {
   const pathname = usePathname();
   const { t } = useLanguage();
+
+  const handleLogin = () => {
+    // TODO: 实现登录逻辑
+    console.log('Login clicked');
+  };
 
   return (
     <div className='w-full'>
@@ -79,9 +107,20 @@ export function Navbar() {
                   </motion.div>
                 ))}
               </div>
-              <div>
-                {/* 语言切换按钮 */}
-                <LanguageSwitch className='fixed top-8 right-8 z-50' />
+              {/* 语言切换按钮 */}
+              <div className='flex items-center space-x-8'>
+                <LanguageSwitch className='z-50' />
+                <motion.button
+                  onClick={handleLogin}
+                  variants={loginButtonVariants}
+                  initial='initial'
+                  animate='animate'
+                  whileHover='hover'
+                  whileTap='tap'
+                  className='px-6 py-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium text-sm
+                    transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900'>
+                  {t('login')}
+                </motion.button>
               </div>
             </div>
           </div>
