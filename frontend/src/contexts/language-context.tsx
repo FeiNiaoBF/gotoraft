@@ -121,6 +121,20 @@ const translations: Translations = {
     en: 'Back to Home',
     zh: '返回首页',
   },
+
+  // 其他内容
+  leader: {
+    en: 'Leader',
+    zh: '领导者',
+  },
+  candidate: {
+    en: 'Candidate',
+    zh: '候选者',
+  },
+  follower: {
+    en: 'Follower',
+    zh: '跟随者',
+  },
 };
 
 interface LanguageContextType {
@@ -135,7 +149,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(
 );
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>('zh');
 
   const t = useCallback(
     (key: string) => {

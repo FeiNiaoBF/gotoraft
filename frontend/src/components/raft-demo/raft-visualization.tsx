@@ -1,224 +1,435 @@
-import { useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { RaftNode, NodeState, createInitialNode } from '@/lib/raft-types';
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useInterval } from '@/hooks/use-interval';
 import { RaftLayout } from '@/layout/raft-bg-layout';
-import { useLanguage } from '@/contexts/language-context';
 
-// Raft可视化配置
-const RAFT_CONFIG = {
-  OFFSET_X: 380, // 右侧偏移量
-  OFFSET_Y: 400, // 上侧偏移量
-  BASE_RADIUS: 250, // 基础轨道半径
-  NODE_SIZE: 64, // 节点直径
-  ORBIT_SPEED_RANGE: [0.0003, 0.0006], // 轨道速度范围
-  SELF_ROTATION: 0.0004, // 自转速度
-  HEARTBEAT_INTERVAL: 800, // 心跳间隔
-  STAR_POINTS: 5, // 五角星的点数
-  STAR_INNER_RATIO: 0.382, // 五角星内圈比例（黄金分割比）
-};
-// 节点可视化参数类型
-interface VisualNode extends RaftNode {
+
+interface Node {
+  id: number;
   x: number;
   y: number;
-  orbitRadius: number; // 轨道半径
-  orbitAngle: number; // 轨道角度
-  rotation: number; // 旋转角度
-  orbitSpeed: number; // 轨道速度
+  state: NodeState;
+  isAlive: boolean;
+  vx: number;
+  vy: number;
 }
 
-export default function RaftVisualization() {
-  const { t } = useLanguage();
+enum NodeState {
+  Follower,
+  Leader,
+}
 
+// 心跳粒子
+interface HeartbeatParticle {
+  id: string;
+  fromNode: number;
+  toNode: number;
+  progress: number;
+  scale: number;
+  opacity: number;
+}
+
+// 动画配置
+const ANIMATION_CONFIG = {
+  HEARTBEAT_INTERVAL: 1000, // 心跳间隔
+  PARTICLE_SPEED: 0.02, // 粒子移动速度
+  PULSE_DURATION: 1.5, // 脉动周期
+  NODE_GLOW_RADIUS: 4, // 节点发光半径
+  PARTICLE_SIZE: 4, // 粒子大小
+  PARTICLE_TRAIL_LENGTH: 2, // 粒子拖尾长度
+} as const;
+
+export default function RaftVisualization() {
+
+  // 节点状态
+  const [nodes, setNodes] = useState<Node[]>([]);
+  // 鼠标悬停的节点
+  const [hoveredNode, setHoveredNode] = useState<number | null>(null);
+  // 心跳粒子列表
+  const [heartbeatParticles, setHeartbeatParticles] = useState<
+    HeartbeatParticle[]
+  >([]);
   // 初始化节点
-  const [nodes, setNodes] = useState<VisualNode[]>(() =>
-    [1, 2, 3, 4, 5].map((id, index) => {
-      const isLeader = id === 1;
-      const angle = (index * 72 * Math.PI) / 180; // 均匀分布在圆上，每个节点间隔72度
-      return {
-        ...createInitialNode(id),
-        state: isLeader ? 'leader' : 'follower',
-        x: RAFT_CONFIG.OFFSET_X + Math.cos(angle) * RAFT_CONFIG.BASE_RADIUS,
-        y: RAFT_CONFIG.OFFSET_Y + Math.sin(angle) * RAFT_CONFIG.BASE_RADIUS,
-        orbitAngle: angle,
-        orbitRadius: RAFT_CONFIG.BASE_RADIUS,
-        rotation: Math.random() * Math.PI * 2,
-        orbitSpeed:
-          RAFT_CONFIG.ORBIT_SPEED_RANGE[0] +
-          Math.random() *
-            (RAFT_CONFIG.ORBIT_SPEED_RANGE[1] -
-              RAFT_CONFIG.ORBIT_SPEED_RANGE[0]),
-      };
-    })
-  );
+  useEffect(() => {
+    const totalNodes = 5;
+    const newNodes = Array.from({ length: totalNodes }, (_, i) => ({
+      id: i + 1,
+      x: Math.random() * 400 + 50, // Random x between 50 and 450
+      y: Math.random() * 300 + 150, // Random y between 150 and 450
+      state: i === 0 ? NodeState.Leader : NodeState.Follower,
+      isAlive: true,
+      vx: (Math.random() - 0.5) * 2, // Random velocity between -1 and 1
+      vy: (Math.random() - 0.5) * 2,
+    }));
+    setNodes(newNodes);
+  }, []);
 
   // 更新节点位置
-  const updateOrbitPositions = useCallback(() => {
-    setNodes((prev) =>
-      prev.map((node) => {
-        const newAngle = node.orbitAngle + node.orbitSpeed;
+  useInterval(() => {
+    setNodes((prevNodes) =>
+      prevNodes.map((node) => {
+        let newX = node.x + node.vx;
+        let newY = node.y + node.vy;
+        let newVx = node.vx;
+        let newVy = node.vy;
+
+        // More strict boundary checking
+        const padding = 30; // Ensure nodes stay within visible area
+        if (newX < padding || newX > 500 - padding) {
+          newVx = -newVx * 0.8; // Add some damping
+          newX = newX < padding ? padding : 500 - padding;
+        }
+        if (newY < padding || newY > 500 - padding) {
+          newVy = -newVy * 0.8; // Add some damping
+          newY = newY < padding ? padding : 500 - padding;
+        }
+
         return {
           ...node,
-          x: RAFT_CONFIG.OFFSET_X + Math.cos(newAngle) * node.orbitRadius,
-          y: RAFT_CONFIG.OFFSET_Y + Math.sin(newAngle) * node.orbitRadius,
-          orbitAngle: newAngle,
-          rotation: node.rotation + RAFT_CONFIG.SELF_ROTATION,
+          x: newX,
+          y: newY,
+          vx: newVx,
+          vy: newVy,
         };
       })
     );
-  }, []);
-
-  // 心跳间隔
-  const [heartbeats, setHeartbeats] = useState<
-    Array<{
-      id: string;
-      from: number;
-      to: number;
-      progress: number;
-    }>
-  >([]);
-
-  // 生成心跳信号
-  const generateHeartbeats = useCallback(() => {
-    const leader = nodes.find((n) => n.state === 'leader');
-    if (!leader) return;
-
-    const followers = nodes.filter((n) => n.state === 'follower');
-    const newParticles = followers.map((follower) => ({
-      id: `${performance.now()}-${leader.id}-${follower.id}`,
-      from: leader.id,
-      to: follower.id,
-      progress: 0,
-    }));
-
-    setHeartbeats((prev) => [...prev.slice(-30), ...newParticles]);
-  }, [nodes]);
-
-  // 心跳粒子动画
-  useInterval(() => {
-    setHeartbeats((prev) =>
-      prev
-        .map((p) => ({ ...p, progress: p.progress + 0.02 }))
-        .filter((p) => p.progress <= 1)
-    );
   }, 50);
-  useInterval(updateOrbitPositions, 16);
-  useInterval(generateHeartbeats, RAFT_CONFIG.HEARTBEAT_INTERVAL);
 
-  // 处理节点点击
+  // Heartbeat animation
+  useInterval(() => {
+    const leader = nodes.find((n) => n.state === NodeState.Leader);
+    if (leader) {
+      const followers = nodes.filter(
+        (n) => n.state === NodeState.Follower && n.isAlive
+      );
+      followers.forEach((follower) => {
+        const newParticle = {
+          id: `${Date.now()}-${follower.id}`,
+          fromNode: leader.id,
+          toNode: follower.id,
+          progress: 0,
+          scale: 1,
+          opacity: 1,
+        };
+        setHeartbeatParticles((prev) => [...prev, newParticle]);
+      });
+    }
+  }, ANIMATION_CONFIG.HEARTBEAT_INTERVAL);
+
+  // Update heartbeat particles
+  useInterval(() => {
+    setHeartbeatParticles((prev) => {
+      return prev
+        .map((particle) => {
+          // 计算新的进度
+          const newProgress =
+            particle.progress + ANIMATION_CONFIG.PARTICLE_SPEED;
+
+          // 计算脉动效果
+          const pulsePhase =
+            (newProgress * Math.PI * 2) / ANIMATION_CONFIG.PULSE_DURATION;
+          const scale = 0.8 + 0.4 * Math.sin(pulsePhase);
+
+          // 计算透明度
+          const opacity =
+            newProgress < 0.1
+              ? newProgress * 10 // 淡入
+              : newProgress > 0.9
+                ? (1 - newProgress) * 10 // 淡出
+                : 1; // 完全不透明
+
+          return {
+            ...particle,
+            progress: newProgress,
+            scale,
+            opacity,
+          };
+        })
+        .filter((particle) => particle.progress <= 1);
+    });
+  }, 50);
+
+  const getNodeColor = (node: Node) => {
+    if (!node.isAlive) return '#ef4444';
+    switch (node.state) {
+      case NodeState.Leader:
+        return 'url(#leaderGradient)';
+      default:
+        return 'url(#followerGradient)';
+    }
+  };
+
   const handleNodeClick = (id: number) => {
-    setNodes((prev) =>
-      prev.map((node) => {
+    setNodes((prevNodes) => {
+      const clickedNode = prevNodes.find((node) => node.id === id);
+      if (!clickedNode) return prevNodes;
+
+      const newState =
+        clickedNode.state === NodeState.Follower
+          ? NodeState.Leader
+          : NodeState.Follower;
+
+      return prevNodes.map((node) => {
         if (node.id === id) {
-          const newState: NodeState =
-            node.state === 'follower' ? 'leader' : 'follower';
           return { ...node, state: newState };
         }
-        // 如果其他节点是leader，则降级为follower
-        return node.state === 'leader' ? { ...node, state: 'follower' } : node;
-      })
-    );
+        // If this node becomes leader, all other nodes become followers
+        if (newState === NodeState.Leader && node.id !== id) {
+          return { ...node, state: NodeState.Follower };
+        }
+        return node;
+      });
+    });
   };
 
   return (
     <RaftLayout
-      starDensity={0.8}
+      starDensity={0.5}
       withGalaxyEffect={false}>
-      <div className='relative w-full h-full'>
-        <svg
-          className='absolute inset-0 w-full h-full pointer-events-none'
-          style={{ zIndex: 1 }}>
-          {/* 渲染圆形轨道 */}
-          <circle
-            cx={RAFT_CONFIG.OFFSET_X + RAFT_CONFIG.NODE_SIZE / 2}
-            cy={RAFT_CONFIG.OFFSET_Y + RAFT_CONFIG.NODE_SIZE / 2}
-            r={RAFT_CONFIG.BASE_RADIUS}
-            stroke='rgba(100, 149, 237, 0.1)'
-            strokeWidth='1'
-            fill='none'
-          />
-          {/* 渲染心跳粒子 */}
-          {heartbeats.map((particle) => {
-            const fromNode = nodes.find((n) => n.id === particle.from);
-            const toNode = nodes.find((n) => n.id === particle.to);
-            if (!fromNode || !toNode) return null;
+      <div className='relative w-full h-full flex flex-col'>
+        {/* Add gradient background */}
+        <div className='absolute inset-0 bg-gradient-radial from-slate-900 via-emerald-900/20 to-slate-900 rounded-3xl' />
+        <div className='absolute inset-0 backdrop-blur-[100px]' />
 
-            const x1 = fromNode.x;
-            const y1 = fromNode.y;
-            const x2 = toNode.x;
-            const y2 = toNode.y;
+        <div className='relative flex-1 flex items-center justify-center'>
+          <svg
+            className='w-full h-full max-w-[800px] max-h-[600px]'
+            viewBox='0 0 500 500'
+            preserveAspectRatio='xMidYMid meet'
+            style={{ minHeight: '500px' }}>
+            <defs>
+              <linearGradient
+                id='leaderGradient'
+                x1='0%'
+                y1='0%'
+                x2='100%'
+                y2='100%'>
+                <stop
+                  offset='0%'
+                  stopColor='#10b981'
+                />
+                <stop
+                  offset='100%'
+                  stopColor='#059669'
+                />
+              </linearGradient>
+              <linearGradient
+                id='followerGradient'
+                x1='0%'
+                y1='0%'
+                x2='100%'
+                y2='100%'>
+                <stop
+                  offset='0%'
+                  stopColor='#64748b'
+                />
+                <stop
+                  offset='100%'
+                  stopColor='#475569'
+                />
+              </linearGradient>
 
-            const dx = x2 - x1;
-            const dy = y2 - y1;
-            const x = x1 + dx * particle.progress;
-            const y = y1 + dy * particle.progress;
+              <filter id='glow'>
+                <feGaussianBlur
+                  stdDeviation='4'
+                  result='coloredBlur'
+                />
+                <feMerge>
+                  <feMergeNode in='coloredBlur' />
+                  <feMergeNode in='SourceGraphic' />
+                </feMerge>
+              </filter>
 
-            return (
-              <circle
-                key={particle.id}
-                cx={x}
-                cy={y}
-                r={3}
-                fill='#64B5F6'
-                opacity={1 - particle.progress}
-              />
-            );
-          })}
-        </svg>
+              <filter id='particleGlow'>
+                <feGaussianBlur
+                  stdDeviation='2'
+                  result='coloredBlur'
+                />
+                <feMerge>
+                  <feMergeNode in='coloredBlur' />
+                  <feMergeNode in='SourceGraphic' />
+                </feMerge>
+              </filter>
 
-        {/* 渲染节点 */}
-        {nodes.map((node) => {
-          const isLeader = node.state === 'leader';
-          const leaderGradient =
-            'bg-gradient-to-br from-emerald-400 to-emerald-600';
-          const followerGradient =
-            'bg-gradient-to-br from-slate-500 to-slate-700';
+              {/* 添加粒子发光渐变 */}
+              <radialGradient id='particleGradient'>
+                <stop
+                  offset='0%'
+                  stopColor='#10b981'
+                  stopOpacity='1'
+                />
+                <stop
+                  offset='50%'
+                  stopColor='#10b981'
+                  stopOpacity='0.5'
+                />
+                <stop
+                  offset='100%'
+                  stopColor='#10b981'
+                  stopOpacity='0'
+                />
+              </radialGradient>
+            </defs>
 
-          return (
-            <motion.div
-              key={node.id}
-              className={`absolute flex items-center justify-center rounded-full cursor-pointer
-              shadow-xl transition-colors duration-300 ${
-                isLeader ? leaderGradient : followerGradient
-              }`}
-              style={{
-                width: RAFT_CONFIG.NODE_SIZE,
-                height: RAFT_CONFIG.NODE_SIZE,
-                x: node.x - RAFT_CONFIG.NODE_SIZE / 2,
-                y: node.y - RAFT_CONFIG.NODE_SIZE / 2,
-                rotate: node.rotation,
-              }}
-              whileHover={{ scale: 1.15 }}
-              whileTap={{ scale: 0.95 }}
-              transition={{ type: 'spring', stiffness: 300 }}
-              onClick={() => handleNodeClick(node.id)}>
-              <span className='text-white font-medium text-sm z-10'>
-                {node.id}
-              </span>
-
-              {/* 领导者光环 */}
-              {isLeader && (
-                <motion.div
-                  className='absolute inset-0 rounded-full border-2 border-emerald-400/30'
+            {/* Connections */}
+            {nodes.map((source, i) =>
+              nodes.slice(i + 1).map((target) => (
+                <motion.path
+                  key={`${source.id}-${target.id}`}
+                  d={`M${source.x},${source.y} L${target.x},${target.y}`}
+                  stroke={
+                    source.state === NodeState.Leader ||
+                      target.state === NodeState.Leader
+                      ? 'url(#leaderGradient)'
+                      : '#475569'
+                  }
+                  strokeWidth={1.5}
+                  strokeDasharray={
+                    source.state === NodeState.Leader ||
+                      target.state === NodeState.Leader
+                      ? '0'
+                      : '4,4'
+                  }
+                  initial={{ pathLength: 0, opacity: 0 }}
                   animate={{
-                    scale: [1, 1.4],
-                    opacity: [0.3, 0],
+                    pathLength: 1,
+                    opacity: 0.3,
+                    strokeDashoffset:
+                      source.state === NodeState.Leader ||
+                        target.state === NodeState.Leader
+                        ? 0
+                        : -20,
                   }}
                   transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
+                    pathLength: { duration: 0.5 },
+                    opacity: { duration: 0.3 },
+                    strokeDashoffset: {
+                      repeat: Number.POSITIVE_INFINITY,
+                      duration: 2,
+                      ease: 'linear',
+                    },
                   }}
                 />
-              )}
-            </motion.div>
-          );
-        })}
-      </div>
-      {/* 说明文字 */}
-      <div className='absolute bottom-8 left-1/2 -translate-x-1/2 text-center'>
-        <p className='text-sm text-emerald-100/90'>{t('nodeInstruction')}</p>
-        <p className='text-xs text-slate-400/80 mt-1'>{t('nodeStates')}</p>
+              ))
+            )}
+
+            {/* Heartbeat particles */}
+            {heartbeatParticles.map((particle) => {
+              const fromNode = nodes.find((n) => n.id === particle.fromNode);
+              const toNode = nodes.find((n) => n.id === particle.toNode);
+              if (!fromNode || !toNode) return null;
+
+              // 计算粒子位置
+              const x = fromNode.x + (toNode.x - fromNode.x) * particle.progress;
+              const y = fromNode.y + (toNode.y - fromNode.y) * particle.progress;
+
+              // 创建拖尾效果
+              const trail = Array.from(
+                { length: ANIMATION_CONFIG.PARTICLE_TRAIL_LENGTH },
+                (_, i) => {
+                  const trailProgress = Math.max(0, particle.progress - i * 0.05);
+                  const trailX =
+                    fromNode.x + (toNode.x - fromNode.x) * trailProgress;
+                  const trailY =
+                    fromNode.y + (toNode.y - fromNode.y) * trailProgress;
+                  const trailOpacity =
+                    particle.opacity *
+                    (1 - i / ANIMATION_CONFIG.PARTICLE_TRAIL_LENGTH);
+
+                  return (
+                    <motion.circle
+                      key={`${particle.id}-trail-${i}`}
+                      cx={trailX}
+                      cy={trailY}
+                      r={
+                        ANIMATION_CONFIG.PARTICLE_SIZE *
+                        (1 - i / ANIMATION_CONFIG.PARTICLE_TRAIL_LENGTH)
+                      }
+                      fill='#10b981'
+                      opacity={trailOpacity * 0.3}
+                      filter='url(#particleGlow)'
+                    />
+                  );
+                }
+              );
+
+              return (
+                <g key={particle.id}>
+                  {trail}
+                  <motion.circle
+                    cx={x}
+                    cy={y}
+                    r={ANIMATION_CONFIG.PARTICLE_SIZE}
+                    fill='#10b981'
+                    filter='url(#particleGlow)'
+                    style={{
+                      opacity: particle.opacity,
+                      scale: particle.scale,
+                    }}
+                  />
+                </g>
+              );
+            })}
+
+            {/* Nodes */}
+            {nodes.map((node) => (
+              <g
+                key={node.id}
+                transform={`translate(${node.x},${node.y})`}>
+                <AnimatePresence>
+                  {node.state === NodeState.Leader && (
+                    <motion.circle
+                      cx={0}
+                      cy={0}
+                      r={25}
+                      fill='none'
+                      stroke='url(#leaderGradient)'
+                      strokeWidth={2}
+                      initial={{ scale: 1, opacity: 0 }}
+                      animate={{ scale: 1.5, opacity: 0.2 }}
+                      exit={{ scale: 1, opacity: 0 }}
+                      transition={{
+                        repeat: Number.POSITIVE_INFINITY,
+                        duration: 2,
+                        ease: 'easeInOut',
+                      }}
+                    />
+                  )}
+                </AnimatePresence>
+
+                <motion.circle
+                  cx={0}
+                  cy={0}
+                  r={20}
+                  fill={getNodeColor(node)}
+                  stroke={node.state === NodeState.Leader ? '#10b981' : '#475569'}
+                  strokeWidth={2}
+                  initial={{ scale: 0 }}
+                  animate={{
+                    scale: 1,
+                    filter: hoveredNode === node.id ? 'url(#glow)' : 'none',
+                  }}
+                  whileHover={{ scale: 1.1 }}
+                  onMouseEnter={() => setHoveredNode(node.id)}
+                  onMouseLeave={() => setHoveredNode(null)}
+                  onClick={() => handleNodeClick(node.id)}
+                  transition={{ duration: 0.3 }}
+                  style={{ cursor: 'pointer' }}
+                />
+
+                <text
+                  x={0}
+                  y={0}
+                  textAnchor='middle'
+                  dy='.3em'
+                  className='text-xs font-medium fill-white'
+                  pointerEvents='none'>
+                  {node.id}
+                </text>
+              </g>
+            ))}
+          </svg>
+        </div>
       </div>
     </RaftLayout>
   );

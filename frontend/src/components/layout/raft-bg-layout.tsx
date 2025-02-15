@@ -1,6 +1,7 @@
 // 可以通用在首页和Raft可视化页面的背景布局
 import { type ReactNode, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { useLanguage } from '@/contexts/language-context';
 
 interface RaftLayoutProps {
   children: ReactNode;
@@ -27,6 +28,7 @@ export function RaftLayout({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameId = useRef<number>(null);
   const particles = useRef<StarParticle[]>([]);
+  const { t } = useLanguage();
 
   // 初始化粒子系统
   const initParticles = useCallback(
@@ -52,7 +54,7 @@ export function RaftLayout({
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
 
-    ctx.fillStyle = '#0a0e17';
+    ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // 绘制银河系核心（条件渲染）
@@ -121,11 +123,11 @@ export function RaftLayout({
   }, [animate, initParticles]);
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-[#0A0B14]">
+    <div className='relative min-h-screen w-full overflow-hidden bg-[#0f172a]'>
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 h-full w-full"
-        style={{ background: 'linear-gradient(to bottom, #0A0B14, #141625)' }}
+        className='absolute inset-0 h-full w-full'
+        style={{ background: 'linear-gradient(to bottom, #0f172a, #0A0B14)' }}
       />
       {/* 增强型渐变层 */}
       <div className='absolute inset-0 pointer-events-none'>
@@ -147,10 +149,27 @@ export function RaftLayout({
           ease: 'easeInOut',
         }}
       />
-
       {/* 内容容器 */}
-      <div className='relative z-10 w-full h-full backdrop-blur-[1px]'>
-        {children}
+      <div className='relative z-10 w-full min-h-screen backdrop-blur-[1px] flex flex-col'>
+        <div className='flex-1'>
+          {children}
+        </div>
+        {/* 状态说明 - 移到底部并添加固定位置 */}
+        <div className='w-full py-8 bg-gradient-to-t from-slate-900/80 to-transparent'>
+          <div className='flex flex-col items-center'>
+            <div className='flex justify-center space-x-6 text-sm'>
+              <div className='flex items-center'>
+                <div className='w-3 h-3 bg-emerald-500 rounded-full mr-2' />
+                <span className='text-emerald-100'>{t('leader')}</span>
+              </div>
+              <div className='flex items-center'>
+                <div className='w-3 h-3 bg-gray-500 rounded-full mr-2' />
+                <span className='text-gray-300'>{t('follower')}</span>
+              </div>
+            </div>
+            <p className='mt-2 text-xs text-gray-400'>{t('nodeInstruction')}</p>
+          </div>
+        </div>
       </div>
     </div>
   );
