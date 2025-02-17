@@ -53,7 +53,6 @@ func (r *Router) RegisterRoutes() {
 			systemGroup.GET("/health", systemHandler.HandleHealth)
 			systemGroup.GET("/info", systemHandler.HandleSystemInfo)
 			systemGroup.GET("/status", systemHandler.HandleSystemStatus)
-			
 		}
 	}
 
