@@ -142,3 +142,60 @@ gantt
     选举异常测试        :         des5, 2024-02-25, 2d
     日志恢复测试        :         des6, 2024-02-27, 1d
 ```
+
+## 使用Raft核心可视化流程
+
+```mermaid
+graph TD
+    subgraph 前端
+        A[控制面板] -->|WebSocket| B(可视化引擎)
+        B --> C[节点状态图]
+        B --> D[日志流展示]
+    end
+
+    subgraph 后端
+        E[WebSocket服务] --> F[Raft控制器]
+        F --> G[注册中心]
+        F --> H[Raft节点1]
+        F --> I[Raft节点2]
+        H <-->|FooRPC| I
+        H --> J[存储切换器]
+        I --> J
+    end
+
+    J -->|未登录| K[内存存储]
+    J -->|已登录| L[持久化存储]
+```
+
+这个是对Raft核心结构的描述，下面我们来看看Raft的可视化流程
+
+### 对于websocket来说
+
+```mermaid
+graph LR
+    A[WebSocket] --> B[ConfigManager]
+    B --> C[修改Raft参数]
+    B --> D[调整网络模拟]
+    C --> E[实时生效]
+    D --> E
+```
+
+### 可视化接口开发
+
+```mermaid
+graph TD
+    A[WebSocket事件流] --> B[节点状态]
+    A --> C[日志流]
+    A --> D[网络拓扑]
+    E[REST API] --> F[历史记录]
+    E --> G[手动操作]
+```
+
+### KV服务集成
+
+```mermaid
+graph TD
+    A[客户端] --> B[kv服务端] --> C[Raft核心]-->D[状态机]
+    D[状态机] --> B[kv服务端]
+    B[kv服务端] --> A[客户端]
+```

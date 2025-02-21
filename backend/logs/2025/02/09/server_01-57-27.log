@@ -1,4 +1,0 @@
-2025-02-09 01:57:27 | INFO | bootstrap/bootstrap.go:63 | 应用程序正在初始化... 
-2025-02-09 01:57:27 | INFO | bootstrap/bootstrap.go:74 | WebSocket管理器已初始化
-2025-02-09 01:57:27 | INFO | bootstrap/bootstrap.go:82 | HTTP路由已初始化path[]
-2025-02-09 01:57:27 | INFO | bootstrap/bootstrap.go:88 | 应用程序启动成功，监听地址: 0.0.0.0:8080

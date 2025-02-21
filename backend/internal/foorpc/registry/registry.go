@@ -35,6 +35,7 @@ func NewRegistry(timeout time.Duration) *Registry {
 	}
 }
 
+// DefaultFooRegister is the default registry center.
 var DefaultFooRegister = NewRegistry(defaultTimeout)
 
 // putServer registers a server and its info and timeout into the registry center.
