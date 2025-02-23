@@ -29,6 +29,7 @@ func NewNode(config *Config, fsm FSM, storage Storage, transport Transport) (*No
 		fsm:         fsm,
 		transport:   transport,
 		shutdownCh:  make(chan struct{}),
+		mu:          sync.Mutex{},
 	}
 
 	// 初始化 peers

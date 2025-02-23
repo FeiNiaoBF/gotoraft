@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"gotoraft/internal/handler"
-	"gotoraft/pkg/websocket"
+	"gotoraft/internal/websocket"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"

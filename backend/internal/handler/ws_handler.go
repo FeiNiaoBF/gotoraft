@@ -2,8 +2,8 @@
 package handler
 
 import (
+	"gotoraft/internal/websocket"
 	"gotoraft/pkg/logger"
-	"gotoraft/pkg/websocket"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -47,7 +47,7 @@ func (h *WSHandler) HandleStats(c *gin.Context) {
 func (h *WSHandler) RegisterRoutes(r *gin.Engine) {
 	ws := r.Group("/ws")
 	{
-		ws.GET("/connect", h.HandleConnection)  // WebSocket连接端点
-		ws.GET("/stats", h.HandleStats)         // 获取WebSocket统计信息
+		ws.GET("/connect", h.HandleConnection) // WebSocket连接端点
+		ws.GET("/stats", h.HandleStats)        // 获取WebSocket统计信息
 	}
 }

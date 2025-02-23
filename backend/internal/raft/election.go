@@ -19,8 +19,7 @@ func (n *Node) startElection() {
 		return
 	}
 	
-	// 增加任期
-	n.currentTerm++
+	// 不再增加任期，因为已经在 becomeCandidate 中增加了
 	savedCurrentTerm := n.currentTerm
 	n.votedFor = n.id
 	
@@ -86,22 +85,31 @@ func (n *Node) startElection() {
 
 // handleVoteRequest 处理投票请求
 func (n *Node) handleVoteRequest(args *RequestVoteArgs) *RequestVoteReply {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-	
 	reply := &RequestVoteReply{
 		Term:        n.currentTerm,
 		VoteGranted: false,
 	}
+
+	n.mu.Lock()
+	defer n.mu.Unlock()
 	
 	// 如果请求中的任期小于当前任期，拒绝投票
 	if args.Term < n.currentTerm {
+		reply.Term = n.currentTerm
 		return reply
 	}
 	
 	// 如果请求中的任期大于当前任期，转为追随者
 	if args.Term > n.currentTerm {
-		n.becomeFollower(args.Term)
+		n.currentTerm = args.Term
+		n.votedFor = ""
+		n.state = Follower
+		if n.visualizer != nil {
+			n.visualizer.OnStateChange(n.id, n.state, Follower, args.Term)
+		}
+		// 重置选举定时器
+		n.resetElectionTimer()
+		reply.Term = args.Term
 	}
 	
 	// 如果已经投票给其他人，拒绝投票
@@ -142,7 +150,20 @@ func (n *Node) resetElectionTimer() {
 		time.Duration(rand.Int63n(int64(maxElectionTimeout-minElectionTimeout)))
 	
 	n.electionTimer = time.AfterFunc(timeout, func() {
-		n.becomeCandidate()
+		n.mu.Lock()
+		if n.state != Leader {  // 只有非Leader节点才需要发起选举
+			n.state = Candidate
+			n.currentTerm++
+			n.votedFor = n.id
+			if n.visualizer != nil {
+				n.visualizer.OnStateChange(n.id, n.state, Candidate, n.currentTerm)
+			}
+			n.mu.Unlock()
+			// 开始选举
+			go n.startElection()
+		} else {
+			n.mu.Unlock()
+		}
 	})
 }
 
@@ -152,16 +173,18 @@ func (n *Node) becomeCandidate() {
 	defer n.mu.Unlock()
 	
 	// 转变为候选人状态
-	oldState := n.state
-	n.state = Candidate
-	n.currentTerm++
-	n.votedFor = n.id
-	if n.visualizer != nil {
-		n.visualizer.OnStateChange(n.id, oldState, n.state, n.currentTerm)
+	if n.state != Leader {  // 只有非Leader节点才能成为候选人
+		oldState := n.state
+		n.state = Candidate
+		n.currentTerm++
+		n.votedFor = n.id
+		if n.visualizer != nil {
+			n.visualizer.OnStateChange(n.id, oldState, n.state, n.currentTerm)
+		}
+		
+		// 开始选举
+		go n.startElection()
 	}
-	
-	// 开始选举
-	go n.startElection()
 }
 
 // becomeFollower 转变为追随者
