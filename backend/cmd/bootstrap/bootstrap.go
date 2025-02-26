@@ -4,7 +4,6 @@ package bootstrap
 import (
 	"fmt"
 	"gotoraft/config"
-	"gotoraft/internal/foorpc"
 	"gotoraft/internal/kvstore/store"
 	"gotoraft/internal/observer"
 	"gotoraft/internal/router"
@@ -53,11 +52,6 @@ func (app *App) Init() error {
 	// 6. 初始化状态观察器
 	app.initStateObserver()
 
-	// 7. 初始化 Raft
-	if err := app.initRaft(); err != nil {
-		return fmt.Errorf("failed to initialize Raft: %v", err)
-	}
-
 	return nil
 }
 
@@ -86,11 +80,7 @@ func (app *App) initLogger() error {
 // initStore 初始化存储
 func (app *App) initStore() error {
 	peers := []string{"node1", "node2", "node3"} // 示例节点
-	rpcClient, err := foorpc.Dial("tcp", "node1:port") // 替换为实际地址和端口
-	if err != nil {
-		return err
-	}
-	app.store = store.NewStore(peers, "node1", rpcClient)
+	app.store = store.NewStore(peers, "node1")
 	return nil
 }
 
@@ -129,13 +119,6 @@ func (app *App) initRouter() {
 	app.router.RegisterRoutes()
 
 	logger.Info("HTTP路由已初始化")
-}
-
-// initRaft 初始化 Raft
-func (app *App) initRaft() error {
-	// 初始化 Raft
-	app.store.raft.StartRPCServer()
-	return nil
 }
 
 // Run 运行应用程序

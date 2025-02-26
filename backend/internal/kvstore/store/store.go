@@ -2,7 +2,6 @@ package store
 
 import (
 	"gotoraft/config"
-	"gotoraft/internal/foorpc"
 	"gotoraft/internal/raft"
 	"gotoraft/pkg/logger"
 	"sync"
@@ -71,10 +70,10 @@ func (s *Store) GetRaft() *raft.Raft {
 }
 
 // NewStore 创建一个新的 Store 实例
-func NewStore(peers []string, me string, rpcClient *foorpc.Client) *Store {
+func NewStore(peers []string, me string) *Store {
 	return &Store{
 		data: make(map[string]string),
-		raft: raft.NewRaft(peers, me, rpcClient),
+		raft: raft.NewRaft(peers, me),
 	}
 }
 
