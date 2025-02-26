@@ -4,11 +4,13 @@ package bootstrap
 import (
 	"fmt"
 	"gotoraft/config"
+	"gotoraft/internal/foorpc"
 	"gotoraft/internal/kvstore/store"
 	"gotoraft/internal/observer"
 	"gotoraft/internal/router"
 	"gotoraft/internal/websocket"
 	"gotoraft/pkg/logger"
+	"time"
 )
 
 // App 表示应用程序实例
@@ -51,6 +53,11 @@ func (app *App) Init() error {
 	// 6. 初始化状态观察器
 	app.initStateObserver()
 
+	// 7. 初始化 Raft
+	if err := app.initRaft(); err != nil {
+		return fmt.Errorf("failed to initialize Raft: %v", err)
+	}
+
 	return nil
 }
 
@@ -77,29 +84,23 @@ func (app *App) initLogger() error {
 }
 
 // initStore 初始化存储
-func (app *App) initStore() (err error) {
-
-	// 创建存储配置
-	storeConfig := &store.Config{
-		RaftDir:  app.config.Store.RaftDir,
-		RaftBind: app.config.Store.RaftBind,
-		InMemory: app.config.Store.Inmem,
-	}
-
-	// 初始化存储
-	app.store, err = store.NewStore(storeConfig)
+func (app *App) initStore() error {
+	peers := []string{"node1", "node2", "node3"} // 示例节点
+	rpcClient, err := foorpc.Dial("tcp", "node1:port") // 替换为实际地址和端口
 	if err != nil {
 		return err
 	}
-
-	logger.Info("存储系统初始化完成")
+	app.store = store.NewStore(peers, "node1", rpcClient)
 	return nil
 }
 
 // initWebSocket 初始化WebSocket管理器
 func (app *App) initWebSocket() {
 	// 初始化WebSocket管理器
-	app.wsManager = websocket.NewManager()
+	app.wsManager = websocket.NewManager(websocket.Config{
+		MaxConnections:   100,              // 设置最大连接数
+		HeartbeatTimeout: 30 * time.Second, // 设置心跳超时时间
+	})
 	logger.Info("WebSocket管理器已初始化...!")
 }
 
@@ -119,8 +120,8 @@ func (app *App) initStateObserver() error {
 func (app *App) initRouter() {
 	// 创建路由需要传递所有依赖组件
 	app.router = router.NewRouter(
-		app.store,
 		app.wsManager,
+		app.store,
 		app.observer,
 	)
 
@@ -128,6 +129,13 @@ func (app *App) initRouter() {
 	app.router.RegisterRoutes()
 
 	logger.Info("HTTP路由已初始化")
+}
+
+// initRaft 初始化 Raft
+func (app *App) initRaft() error {
+	// 初始化 Raft
+	app.store.raft.StartRPCServer()
+	return nil
 }
 
 // Run 运行应用程序
@@ -142,4 +150,9 @@ func (app *App) Shutdown() {
 	app.observer.Stop()
 	app.store.Shutdown()
 	app.wsManager.Shutdown()
+}
+
+func (app *App) initObserver() {
+	app.observer = observer.NewObserver(app.store)
+	go app.observer.Start()
 }

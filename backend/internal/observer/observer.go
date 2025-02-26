@@ -49,6 +49,7 @@ type RaftStateMessage struct {
 type RaftStateObserver struct {
 	store     *store.Store
 	wsManager *websocket.Manager
+	stopChan  chan struct{} // 用于停止观察的通道
 
 	// 用于计算速率
 	mu               sync.RWMutex
@@ -59,27 +60,37 @@ type RaftStateObserver struct {
 // NewRaftStateObserver 创建一个新的Raft状态观察器
 func NewRaftStateObserver(store *store.Store, wsManager *websocket.Manager) *RaftStateObserver {
 	return &RaftStateObserver{
-		store:          store,
-		wsManager:      wsManager,
-		lastUpdateTime: time.Now(),
+		store:     store,
+		wsManager: wsManager,
+		stopChan:  make(chan struct{}), // 初始化停止通道
 	}
 }
 
 // Start 开始观察Raft状态
 func (o *RaftStateObserver) Start() {
-	go o.observeState()
-}
-
-// observeState 持续观察Raft状态
-func (o *RaftStateObserver) observeState() {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		if err := o.collectAndBroadcastState(); err != nil {
-			logger.Error("收集并广播Raft状态失败", "error", err)
+	for {
+		select {
+		case <-o.stopChan:
+			return // 接收到停止信号，退出循环
+		default:
+			// 监控 Raft 状态
+			time.Sleep(1 * time.Second)
+			// 发送状态更新
+			o.notifyClients("状态更新", "新的Raft状态") // 通知所有连接的客户端
 		}
 	}
+}
+
+// Stop 停止观察器
+func (o *RaftStateObserver) Stop() {
+	close(o.stopChan) // 关闭通道以停止观察
+	logger.Info("Raft状态观察器已停止")
+}
+
+// notifyClients 通知所有WebSocket客户端
+func (o *RaftStateObserver) notifyClients(event string, data string) {
+	o.wsManager.Broadcast([]byte(data)) // 广播状态更新
+	logger.Infof("广播状态更新: %s", data)
 }
 
 // collectMetrics 收集Raft度量指标

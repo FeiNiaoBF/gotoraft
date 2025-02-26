@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -64,13 +65,13 @@ func NewManager(config Config) *Manager {
 func (m *Manager) Register(conn *websocket.Conn) {
 	m.clientsMu.Lock()
 	defer m.clientsMu.Unlock()
-	m.clients[conn] = true
+	m.clients[conn.RemoteAddr().String()] = true // 使用地址字符串作为键
 	logger.Info("新的WebSocket连接注册成功",
 		"remoteAddr", conn.RemoteAddr().String(),
 	)
 }
 
-// 注册客户端时生成唯一ID
+// RegisterClient 注册客户端时生成唯一ID
 func (m *Manager) RegisterClient(conn *websocket.Conn) (string, error) {
 	m.clientsMu.Lock()
 	defer m.clientsMu.Unlock()
@@ -98,7 +99,7 @@ func (m *Manager) RegisterClient(conn *websocket.Conn) (string, error) {
 func (m *Manager) Unregister(conn *websocket.Conn) {
 	m.clientsMu.Lock()
 	defer m.clientsMu.Unlock()
-	delete(m.clients, conn)
+	delete(m.clients, conn.RemoteAddr().String()) // 使用地址字符串作为键
 	logger.Info("WebSocket连接注销成功",
 		"remoteAddr", conn.RemoteAddr().String(),
 	)

@@ -32,10 +32,14 @@ func (h *WSHandler) HandleConnection(c *gin.Context) {
 	}
 
 	// 注册新的WebSocket连接
-	h.wsManager.Register(conn)
+	clientID, err := h.wsManager.RegisterClient(conn)
+	if err != nil {
+		logger.Errorf("Failed to register client: %v", err)
+		return
+	}
 
 	// 记录连接信息
-	logger.Infof("New WebSocket connection established")
+	logger.Infof("New WebSocket connection established: %s", clientID)
 }
 
 // HandleStats 处理WebSocket统计信息请求
