@@ -27,12 +27,13 @@
 │   │   │   ├── service_test.go
 │   │   │   └── xclient
 │   │   ├── handler
+│   │   │   ├── cluster_handler.go
 │   │   │   ├── config_handler.go
+│   │   │   ├── kv_handler.go
 │   │   │   ├── system_handler.go
 │   │   │   ├── web_handler.go
 │   │   │   └── ws_handler.go
 │   │   ├── kvstore
-│   │   │   ├── http
 │   │   │   └── store
 │   │   ├── middleware
 │   │   │   ├── cors.go
@@ -41,12 +42,10 @@
 │   │   ├── observer
 │   │   │   └── observer.go
 │   │   ├── raft
-│   │   │   └── docs
+│   │   │   ├── docs
+│   │   │   └── raft.go
 │   │   ├── router
 │   │   │   └── router.go
-│   │   ├── store
-│   │   │   ├── memory
-│   │   │   └── persistent
 │   │   └── websocket
 │   │       └── manager.go
 │   ├── logs
@@ -100,7 +99,11 @@
 │   │   │   └── raft-types.ts
 │   │   ├── pages
 │   │   │   ├── _app.tsx
-│   │   │   └── index.tsx
+│   │   │   ├── configure.tsx
+│   │   │   ├── dashboard.tsx
+│   │   │   ├── docs.tsx
+│   │   │   ├── index.tsx
+│   │   │   └── monitor.tsx
 │   │   └── styles
 │   │       └── globals.css
 │   ├── tailwind.config.js
@@ -108,4 +111,4 @@
 ├── out
 └── project.code-workspace
 
-856 directories, 2279 files
+852 directories, 2286 files

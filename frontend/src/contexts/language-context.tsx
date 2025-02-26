@@ -27,31 +27,31 @@ const translations: Translations = {
     en: 'Switch to 中文',
     zh: 'Switch to English',
   },
-  processTitle: {
-    en: 'Raft Process',
-    zh: 'Raft 进程',
+  dashboard: {
+    en: 'Raft Dashboard',
+    zh: 'Raft 可视化',
   },
-  configureTitle: {
+  configure: {
     en: 'Node Configuration',
     zh: '节点配置',
   },
-  monitorTitle: {
+  monitor: {
     en: 'Monitoring',
     zh: '监控服务',
   },
-  performanceTitle: {
-    en: 'Performance Analysis',
-    zh: '性能分析',
+  docs: {
+    en: 'Documentation',
+    zh: '文档',
   },
-  helpTitle: {
+  help: {
     en: 'Help',
     zh: '帮助',
   },
-  aboutTitle: {
+  about: {
     en: 'About',
     zh: '关于',
   },
-  settingsTitle: {
+  settings: {
     en: 'Settings',
     zh: '设置',
   },

@@ -5,13 +5,10 @@ import { LanguageSwitch } from '@/ui/language-switch';
 import { motion } from 'framer-motion';
 
 const navItems = [
-  { href: '/process', labelKey: 'processTitle' },
-  { href: '/configure', labelKey: 'configureTitle' },
-  { href: '/monitor', labelKey: 'monitorTitle' },
-  //   { href: '/performance', labelKey: 'performanceTitle' },
-  { href: '/help', labelKey: 'helpTitle' },
-  { href: '/about', labelKey: 'aboutTitle' },
-  { href: '/settings', labelKey: 'settingsTitle' },
+  { href: '/dashboard', labelKey: 'dashboard' },    // 核心可视化界面
+  { href: '/configure', labelKey: 'configure' },   // 集群配置
+  { href: '/monitor', labelKey: 'monitor' },       // 实时监控
+  { href: '/docs', labelKey: 'docs' }              // 文档说明
 ];
 
 // 使用motion来做动画
@@ -22,7 +19,7 @@ const navVariants = {
     y: -20,
   },
   visible: {
-    opacity: 2,
+    opacity: 1,
     y: 0,
     transition: {
       duration: 0.5,
@@ -99,9 +96,8 @@ export function Navbar() {
                     <Link
                       href={item.href}
                       className={`text-sm md:text-base font-medium transition-colors hover:text-white px-2 fontsize-sm
-                      ${
-                        pathname === item.href ? 'text-white' : 'text-slate-400'
-                      }`}>
+                      ${pathname === item.href ? 'text-white' : 'text-slate-400'
+                        }`}>
                       {t(item.labelKey)}
                     </Link>
                   </motion.div>
