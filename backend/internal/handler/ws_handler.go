@@ -1,9 +1,10 @@
 // Package handler 提供HTTP和WebSocket处理器
+// 为使用websocket提供处理器
 package handler
 
 import (
+	"gotoraft/internal/websocket"
 	"gotoraft/pkg/logger"
-	"gotoraft/pkg/websocket"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -15,7 +16,7 @@ type WSHandler struct {
 }
 
 // NewWSHandler 创建一个新的WebSocket处理器
-func NewWSHandler(wsManager *websocket.Manager) *WSHandler {
+func NewWebSocketHandler(wsManager *websocket.Manager) *WSHandler {
 	return &WSHandler{
 		wsManager: wsManager,
 	}
@@ -31,23 +32,18 @@ func (h *WSHandler) HandleConnection(c *gin.Context) {
 	}
 
 	// 注册新的WebSocket连接
-	h.wsManager.Register(conn)
+	clientID, err := h.wsManager.RegisterClient(conn)
+	if err != nil {
+		logger.Errorf("Failed to register client: %v", err)
+		return
+	}
 
 	// 记录连接信息
-	logger.Infof("New WebSocket connection established")
+	logger.Infof("New WebSocket connection established: %s", clientID)
 }
 
 // HandleStats 处理WebSocket统计信息请求
 func (h *WSHandler) HandleStats(c *gin.Context) {
 	stats := h.wsManager.GetConnectionStats()
 	c.JSON(http.StatusOK, stats)
-}
-
-// RegisterRoutes 注册WebSocket相关路由
-func (h *WSHandler) RegisterRoutes(r *gin.Engine) {
-	ws := r.Group("/ws")
-	{
-		ws.GET("/connect", h.HandleConnection)  // WebSocket连接端点
-		ws.GET("/stats", h.HandleStats)         // 获取WebSocket统计信息
-	}
 }

@@ -7,12 +7,39 @@ package websocket
 
 import (
 	"encoding/json"
+	"errors"
 	"gotoraft/pkg/logger"
 	"net/http"
 	"sync"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
+
+// Client WebSocket 客户端
+type Client struct {
+	ID         string // 客户端ID
+	Conn       *websocket.Conn
+	SendChan   chan []byte
+	CloseChan  chan struct{}
+	LastActive time.Time
+}
+
+// Manager websocket 管理器
+// 管理所有的 WebSocket 连接client
+type Manager struct {
+	clientsMu      sync.RWMutex
+	clients        map[string]*Client
+	maxConnections int
+	config         Config
+}
+
+// Config WebSocket 配置
+type Config struct {
+	MaxConnections   int           // 最大连接数
+	HeartbeatTimeout time.Duration // 心跳超时时间
+}
 
 var upgrader = &websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -25,17 +52,12 @@ func NewUpgrader() *websocket.Upgrader {
 	return upgrader
 }
 
-// Manager websocket 管理器
-// 管理所有的 WebSocket 连接client
-type Manager struct {
-	clientsMu sync.RWMutex
-	clients   map[*websocket.Conn]bool
-}
-
 // NewManager 创建一个新的 Manager
-func NewManager() *Manager {
+func NewManager(config Config) *Manager {
 	return &Manager{
-		clients: make(map[*websocket.Conn]bool),
+		clients:        make(map[string]*Client),
+		maxConnections: config.MaxConnections,
+		config:         config,
 	}
 }
 
@@ -43,17 +65,41 @@ func NewManager() *Manager {
 func (m *Manager) Register(conn *websocket.Conn) {
 	m.clientsMu.Lock()
 	defer m.clientsMu.Unlock()
-	m.clients[conn] = true
+	m.clients[conn.RemoteAddr().String()] = true // 使用地址字符串作为键
 	logger.Info("新的WebSocket连接注册成功",
 		"remoteAddr", conn.RemoteAddr().String(),
 	)
+}
+
+// RegisterClient 注册客户端时生成唯一ID
+func (m *Manager) RegisterClient(conn *websocket.Conn) (string, error) {
+	m.clientsMu.Lock()
+	defer m.clientsMu.Unlock()
+
+	if len(m.clients) >= m.maxConnections {
+		return "", errors.New("达到最大连接数限制")
+	}
+
+	clientID := uuid.New().String()
+	client := &Client{
+		ID:         clientID,
+		Conn:       conn,
+		SendChan:   make(chan []byte, 256),
+		CloseChan:  make(chan struct{}),
+		LastActive: time.Now(),
+	}
+
+	m.clients[clientID] = client
+	go m.handleClient(client)
+
+	return clientID, nil
 }
 
 // Unregister 注销WebSocket连接
 func (m *Manager) Unregister(conn *websocket.Conn) {
 	m.clientsMu.Lock()
 	defer m.clientsMu.Unlock()
-	delete(m.clients, conn)
+	delete(m.clients, conn.RemoteAddr().String()) // 使用地址字符串作为键
 	logger.Info("WebSocket连接注销成功",
 		"remoteAddr", conn.RemoteAddr().String(),
 	)
@@ -104,8 +150,27 @@ func (m *Manager) BroadcastJSON(data interface{}) {
 	}
 }
 
-// ConnectionStats WebSocket连接统计信息
-type ConnectionStats struct {
-	ActiveConnections int    `json:"activeConnections"`
-	Status            string `json:"status"`
+func (m *Manager) StartHeartbeat() {
+	ticker := time.NewTicker(m.config.HeartbeatTimeout / 2)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		m.clientsMu.RLock()
+		for _, client := range m.clients {
+			if time.Since(client.LastActive) > m.config.HeartbeatTimeout {
+				m.UnregisterClient(client.ID)
+				continue
+			}
+
+			// 发送Ping消息
+			if err := client.Conn.WriteControl(
+				websocket.PingMessage,
+				[]byte{},
+				time.Now().Add(time.Second),
+			); err != nil {
+				m.UnregisterClient(client.ID)
+			}
+		}
+		m.clientsMu.RUnlock()
+	}
 }

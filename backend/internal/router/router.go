@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"gotoraft/internal/handler"
-	"gotoraft/pkg/websocket"
+	"gotoraft/internal/kvstore/store"
+	"gotoraft/internal/observer"
+	"gotoraft/internal/websocket"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -14,11 +16,13 @@ import (
 // Router 封装gin路由器
 type Router struct {
 	engine    *gin.Engine
-	wsHandler *handler.WSHandler
+	store     *store.Store
+	wsManager *websocket.Manager
+	observer  *observer.RaftStateObserver
 }
 
 // NewRouter 创建一个新的路由器实例
-func NewRouter(wsManager *websocket.Manager) *Router {
+func NewRouter(wsManager *websocket.Manager, store *store.Store, observer *observer.RaftStateObserver) *Router {
 	engine := gin.New() // 使用gin.New()而不是gin.Default()以自定义中间件
 
 	// 添加中间件
@@ -37,7 +41,9 @@ func NewRouter(wsManager *websocket.Manager) *Router {
 
 	return &Router{
 		engine:    engine,
-		wsHandler: handler.NewWSHandler(wsManager),
+		store:     store,
+		wsManager: wsManager,
+		observer:  observer,
 	}
 }
 
@@ -57,18 +63,47 @@ func (r *Router) RegisterRoutes() {
 	}
 
 	// WebSocket路由
-	r.engine.GET("/ws", r.wsHandler.HandleConnection)
+	r.registerWebSocketRoutes()
 
-	// 注册WebSocket路由
-	r.wsHandler.RegisterRoutes(r.engine)
+	// KV存储路由
+	r.registerKVStoreRoutes()
+
+	// TODO: 实现配置管理路由
+	r.engine.GET("/api/config", r.handleGetConfig)
+	r.engine.PUT("/api/config", r.handleUpdateConfig)
+
+	// TODO: 实现集群管理路由
+	r.engine.POST("/api/cluster/join", r.handleJoinCluster)
+	r.engine.POST("/api/cluster/leave", r.handleLeaveCluster)
+
+}
+
+// registerWebSocketRoutes 注册WebSocket相关路由
+func (r *Router) registerWebSocketRoutes() {
+	websocketHandler := handler.NewWebSocketHandler(r.wsManager)
+	websocketGroup := r.engine.Group("/ws")
+	{
+		// WebSocket基础路由
+		websocketGroup.GET("/", websocketHandler.Handle)
+		// WebSocket连接端点
+		websocketGroup.GET("/connect", websocketHandler.HandleConnection)
+		// 获取WebSocket统计信息
+		websocketGroup.GET("/stats", websocketHandler.HandleStats)
+	}
+}
+
+// registerKVStoreRoutes 注册KV存储相关路由
+func (r *Router) registerKVStoreRoutes() {
+	kvStoreHandler := handler.NewKVStoreHandler(r.store)
+	kvStoreGroup := r.engine.Group("/api/kv")
+	{
+		kvStoreGroup.GET("/:key", kvStoreHandler.HandleGet)
+		kvStoreGroup.POST("", kvStoreHandler.HandleSet)
+		kvStoreGroup.DELETE("/:key", kvStoreHandler.HandleDelete)
+	}
 }
 
 // Run 启动HTTP服务器
 func (r *Router) Run(addr string) error {
 	return r.engine.Run(addr)
-}
-
-// Engine 获取底层的gin引擎实例
-func (r *Router) Engine() *gin.Engine {
-	return r.engine
 }

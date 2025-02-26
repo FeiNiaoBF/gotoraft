@@ -1,0 +1,111 @@
+.
+├── LICENSE
+├── README.md
+├── backend
+│   ├── cmd
+│   │   └── bootstrap
+│   │       └── bootstrap.go
+│   ├── config
+│   │   ├── config.go
+│   │   └── config.yaml
+│   ├── go.mod
+│   ├── go.sum
+│   ├── internal
+│   │   ├── codec
+│   │   │   ├── codec.go
+│   │   │   ├── codec_test.go
+│   │   │   ├── gob.go
+│   │   │   └── json.go
+│   │   ├── foorpc
+│   │   │   ├── client.go
+│   │   │   ├── client_test.go
+│   │   │   ├── debug.go
+│   │   │   ├── registry
+│   │   │   ├── server.go
+│   │   │   ├── server_test.go
+│   │   │   ├── service.go
+│   │   │   ├── service_test.go
+│   │   │   └── xclient
+│   │   ├── handler
+│   │   │   ├── config_handler.go
+│   │   │   ├── system_handler.go
+│   │   │   ├── web_handler.go
+│   │   │   └── ws_handler.go
+│   │   ├── kvstore
+│   │   │   ├── http
+│   │   │   └── store
+│   │   ├── middleware
+│   │   │   ├── cors.go
+│   │   │   ├── logger.go
+│   │   │   └── recovery.go
+│   │   ├── observer
+│   │   │   └── observer.go
+│   │   ├── raft
+│   │   │   └── docs
+│   │   ├── router
+│   │   │   └── router.go
+│   │   ├── store
+│   │   │   ├── memory
+│   │   │   └── persistent
+│   │   └── websocket
+│   │       └── manager.go
+│   ├── logs
+│   │   └── 2025
+│   │       └── 02
+│   ├── main.go
+│   ├── pkg
+│   │   ├── errors
+│   │   │   ├── codes.go
+│   │   │   └── errors.go
+│   │   └── logger
+│   │       └── logger.go
+│   └── util
+│       └── raft
+│           └── raft.go
+├── docs
+│   ├── 前端项目.md
+│   ├── 后端项目.md
+│   ├── 算法可视化平台代码流程.md
+│   ├── 项目结构.md
+│   └── 项目需求.md
+├── frontend
+│   ├── README.md
+│   ├── eslint.config.mjs
+│   ├── next-env.d.ts
+│   ├── next.config.js
+│   ├── node_modules
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── postcss.config.js
+│   ├── postcss.config.mjs
+│   ├── public
+│   │   ├── file.svg
+│   │   ├── globe.svg
+│   │   ├── next.svg
+│   │   ├── vercel.svg
+│   │   └── window.svg
+│   ├── src
+│   │   ├── components
+│   │   │   ├── error-boundary.tsx
+│   │   │   ├── layout
+│   │   │   ├── loading-spinner.tsx
+│   │   │   ├── raft-demo
+│   │   │   └── ui
+│   │   ├── contexts
+│   │   │   └── language-context.tsx
+│   │   ├── hooks
+│   │   │   └── use-interval.ts
+│   │   ├── lib
+│   │   │   ├── fonts.ts
+│   │   │   └── raft-types.ts
+│   │   ├── pages
+│   │   │   ├── _app.tsx
+│   │   │   └── index.tsx
+│   │   └── styles
+│   │       └── globals.css
+│   ├── tailwind.config.js
+│   └── tsconfig.json
+├── out
+└── project.code-workspace
+
+856 directories, 2279 files

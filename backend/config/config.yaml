@@ -12,3 +12,7 @@ log:
   max_backups: 10 # 保留的旧日志文件最大数量
   compress: true # 是否压缩旧日志文件
   time_format: '2006-01-02 15:04:05' # 时间格式
+
+store:
+  raft_dir: 'data/raft'
+  raft_bind: '0.0.0.0:10000'
