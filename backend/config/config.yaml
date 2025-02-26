@@ -13,11 +13,6 @@ log:
   compress: true # 是否压缩旧日志文件
   time_format: '2006-01-02 15:04:05' # 时间格式
 
-raft:
-  data_dir: 'data/raft' # Raft数据存储目录
-  host: '0.0.0.0' # Raft节点监听地址
-  port: 8081 # Raft节点监听端口
-  bootstrap: true # 是否为初始化节点
-  join_addr: '' # 加入集群的地址，如果是初始节点则为空
-
-node_id: 'node1' # 节点ID，在集群中必须唯一
+store:
+  raft_dir: 'data/raft'
+  raft_bind: '0.0.0.0:10000'

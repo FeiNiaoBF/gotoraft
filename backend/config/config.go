@@ -3,15 +3,19 @@
 package config
 
 import (
+	"time"
+
 	"github.com/spf13/viper"
 )
 
 // Config 用于存储和管理配置
 type Config struct {
+	// 服务器配置
 	Server *ServerConfig `mapstructure:"server"`
-	Log    *LogConfig    `mapstructure:"log"`
-	Raft   *RaftConfig   `mapstructure:"raft"`
-	NodeID string        `mapstructure:"node_id"`
+	// 日志配置
+	Log *LogConfig `mapstructure:"log"`
+	// 存储配置
+	Store *StoreConfig `mapstructure:"store"`
 }
 
 // ServerConfig 服务器配置
@@ -33,13 +37,21 @@ type LogConfig struct {
 	TimeFormat string `mapstructure:"time_format"`
 }
 
-// RaftConfig Raft配置
-type RaftConfig struct {
-	DataDir   string `mapstructure:"data_dir"`  // Raft数据存储目录
-	Host      string `mapstructure:"host"`      // Raft节点监听地址
-	Port      int    `mapstructure:"port"`      // Raft节点监听端口
-	Bootstrap bool   `mapstructure:"bootstrap"` // 是否为初始化节点
-	JoinAddr  string `mapstructure:"join_addr"` // 加入集群的地址
+type StoreConfig struct {
+	// Raft 存储路径
+	RaftDir string `mapstructure:"raft_dir"`
+	// Raft 绑定地址
+	RaftBind string `mapstructure:"raft_bind"`
+	// 是否使用内存存储
+	Inmem bool `mapstructure:"inmem"`
+	// 添加以下配置
+	NodeID     string   `mapstructure:"node_id"`
+	JoinAddrs  []string `mapstructure:"join_addrs"`
+	RaftConfig struct {
+		HeartbeatTimeout time.Duration `mapstructure:"heartbeat_timeout"`
+		ElectionTimeout  time.Duration `mapstructure:"election_timeout"`
+		CommitTimeout    time.Duration `mapstructure:"commit_timeout"`
+	} `mapstructure:"raft_config"`
 }
 
 var (
@@ -94,13 +106,9 @@ func setDefaults() {
 	viper.SetDefault("log.compress", true)
 	viper.SetDefault("log.time_format", "2006-01-02 15:04:05")
 
-	viper.SetDefault("raft.data_dir", "data/raft")
-	viper.SetDefault("raft.host", "0.0.0.0")
-	viper.SetDefault("raft.port", 8081)
-	viper.SetDefault("raft.bootstrap", false)
-	viper.SetDefault("raft.join_addr", "")
-
-	viper.SetDefault("node_id", "node1")
+	viper.SetDefault("store.raft_dir", "data/raft")
+	viper.SetDefault("store.raft_bind", "0.0.0.0:10000")
+	viper.SetDefault("store.inmem", true)
 }
 
 // createDefaultConfig 创建默认配置文件
@@ -124,7 +132,7 @@ func GetLogConfig() *LogConfig {
 	return AppConfig.Log
 }
 
-// GetRaftConfig 获取Raft配置
-func GetRaftConfig() *RaftConfig {
-	return AppConfig.Raft
+// GetStoreConfig 获取存储配置
+func GetStoreConfig() *StoreConfig {
+	return AppConfig.Store
 }

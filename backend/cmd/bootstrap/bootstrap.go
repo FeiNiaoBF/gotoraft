@@ -16,7 +16,8 @@ type App struct {
 	config    *config.Config
 	router    *router.Router
 	wsManager *websocket.Manager
-	store     *store.Store
+	store     *store.Store                // kv存储
+	observer  *observer.RaftStateObserver // Raft状态观察器
 }
 
 // NewApp 创建一个新的 App 实例
@@ -60,6 +61,7 @@ func (app *App) initConfig() error {
 		return fmt.Errorf("failed to load config: %v", err)
 	}
 	app.config = config.GetConfig()
+	logger.Info("配置已加载...!")
 	return nil
 }
 
@@ -69,47 +71,28 @@ func (app *App) initLogger() error {
 		return err
 	}
 
-	logger.Infof("应用程序正在初始化... ")
+	logger.Infof("应用程序正在初始化...!")
 
 	return nil
 }
 
-// initStore 初始化Raft存储
-func (app *App) initStore() error {
-	raftConfig := app.config.Raft
-	if raftConfig == nil {
-		return fmt.Errorf("raft configuration is missing")
+// initStore 初始化存储
+func (app *App) initStore() (err error) {
+
+	// 创建存储配置
+	storeConfig := &store.Config{
+		RaftDir:  app.config.Store.RaftDir,
+		RaftBind: app.config.Store.RaftBind,
+		InMemory: app.config.Store.Inmem,
 	}
 
-	// 创建存储实例
-	s := store.New(false) // 使用持久化存储
-	
-	// 设置Raft存储路径和监听地址
-	s.RaftDir = raftConfig.DataDir
-	s.RaftBind = fmt.Sprintf("%s:%d", raftConfig.Host, raftConfig.Port)
-
-	// 打开存储，如果是bootstrap节点则启用单节点模式
-	if err := s.Open(raftConfig.Bootstrap, app.config.NodeID); err != nil {
-		return fmt.Errorf("failed to open store: %v", err)
+	// 初始化存储
+	app.store, err = store.NewStore(storeConfig)
+	if err != nil {
+		return err
 	}
 
-	// 如果配置了join地址，则尝试加入集群
-	if !raftConfig.Bootstrap && raftConfig.JoinAddr != "" {
-		if err := s.Join(app.config.NodeID, raftConfig.JoinAddr); err != nil {
-			return fmt.Errorf("failed to join cluster: %v", err)
-		}
-		logger.Info("成功加入Raft集群", 
-			"nodeId", app.config.NodeID,
-			"joinAddr", raftConfig.JoinAddr,
-		)
-	}
-
-	app.store = s
-	logger.Info("Raft存储初始化成功",
-		"dataDir", s.RaftDir,
-		"bindAddr", s.RaftBind,
-		"bootstrap", raftConfig.Bootstrap,
-	)
+	logger.Info("存储系统初始化完成")
 	return nil
 }
 
@@ -117,34 +100,46 @@ func (app *App) initStore() error {
 func (app *App) initWebSocket() {
 	// 初始化WebSocket管理器
 	app.wsManager = websocket.NewManager()
-	logger.Info("WebSocket管理器已初始化")
+	logger.Info("WebSocket管理器已初始化...!")
+}
+
+// initStateObserver 初始化Raft状态观察器
+func (app *App) initStateObserver() error {
+	app.observer = observer.NewRaftStateObserver(
+		app.store,
+		app.wsManager,
+	)
+	// 启动状态观察
+	go app.observer.Start()
+	logger.Info("Raft状态观察器已启动...!")
+	return nil
 }
 
 // initRouter 初始化HTTP路由
 func (app *App) initRouter() {
-	// 创建路由管理器，并传入WebSocket管理器
-	app.router = router.NewRouter(app.wsManager)
-	// 注册所有路由
+	// 创建路由需要传递所有依赖组件
+	app.router = router.NewRouter(
+		app.store,
+		app.wsManager,
+		app.observer,
+	)
+
+	// 注册路由
 	app.router.RegisterRoutes()
-	logger.Info("HTTP路由和WebSocket已初始化")
-}
 
-// initStateObserver 初始化Raft状态观察器
-func (app *App) initStateObserver() {
-	if app.store == nil || app.wsManager == nil {
-		logger.Error("初始化状态观察器失败：store或wsManager未初始化")
-		return
-	}
-
-	observer := observer.NewRaftStateObserver(app.store, app.wsManager, app.config.NodeID)
-	observer.Start()
-
-	logger.Info("Raft状态观察器初始化成功")
+	logger.Info("HTTP路由已初始化")
 }
 
 // Run 运行应用程序
 func (app *App) Run() error {
 	addr := fmt.Sprintf("%s:%d", app.config.Server.Host, app.config.Server.Port)
 	logger.Infof("应用程序启动成功，监听地址: %s", addr)
-	return app.router.Engine().Run(addr)
+	return app.router.Run(addr)
+}
+
+func (app *App) Shutdown() {
+	// 关闭顺序与初始化顺序相反
+	app.observer.Stop()
+	app.store.Shutdown()
+	app.wsManager.Shutdown()
 }

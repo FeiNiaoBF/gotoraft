@@ -15,41 +15,40 @@ import (
 // RaftMetrics 表示Raft的度量指标
 type RaftMetrics struct {
 	// 基本状态
-	State          string    `json:"state"`
-	Term          uint64    `json:"term"`
-	LastLogIndex   uint64    `json:"lastLogIndex"`
-	LastLogTerm    uint64    `json:"lastLogTerm"`
-	CommitIndex    uint64    `json:"commitIndex"`
-	AppliedIndex   uint64    `json:"appliedIndex"`
-	
+	State        string `json:"state"`
+	Term         uint64 `json:"term"`
+	LastLogIndex uint64 `json:"lastLogIndex"`
+	LastLogTerm  uint64 `json:"lastLogTerm"`
+	CommitIndex  uint64 `json:"commitIndex"`
+	AppliedIndex uint64 `json:"appliedIndex"`
+
 	// 性能指标
-	Progress       float64   `json:"progress"`
-	Speed         float64   `json:"speed"`
-	
+	Progress float64 `json:"progress"`
+	Speed    float64 `json:"speed"`
+
 	// 集群信息
-	Leader        string    `json:"leader"`
-	VotedFor      string    `json:"votedFor"`
-	Peers         []string  `json:"peers"`
-	
+	Leader   string   `json:"leader"`
+	VotedFor string   `json:"votedFor"`
+	Peers    []string `json:"peers"`
+
 	// 统计信息
-	NumLogs       uint64    `json:"numLogs"`
-	PendingLogs   uint64    `json:"pendingLogs"`
-	LastContact   time.Time `json:"lastContact"`
+	NumLogs     uint64    `json:"numLogs"`
+	PendingLogs uint64    `json:"pendingLogs"`
+	LastContact time.Time `json:"lastContact"`
 }
 
 // RaftStateMessage 表示Raft状态消息
 type RaftStateMessage struct {
-	Type      string       `json:"type"`
-	NodeID    string       `json:"nodeId"`
-	Timestamp time.Time    `json:"timestamp"`
-	Metrics   RaftMetrics  `json:"metrics"`
+	Type      string      `json:"type"` // 消息类型
+	NodeID    string      `json:"nodeId"`
+	Timestamp time.Time   `json:"timestamp"`
+	Metrics   RaftMetrics `json:"metrics"`
 }
 
 // RaftStateObserver 观察Raft状态的观察器
 type RaftStateObserver struct {
 	store     *store.Store
 	wsManager *websocket.Manager
-	nodeID    string
 
 	// 用于计算速率
 	mu               sync.RWMutex
@@ -58,11 +57,10 @@ type RaftStateObserver struct {
 }
 
 // NewRaftStateObserver 创建一个新的Raft状态观察器
-func NewRaftStateObserver(store *store.Store, wsManager *websocket.Manager, nodeID string) *RaftStateObserver {
+func NewRaftStateObserver(store *store.Store, wsManager *websocket.Manager) *RaftStateObserver {
 	return &RaftStateObserver{
 		store:          store,
 		wsManager:      wsManager,
-		nodeID:         nodeID,
 		lastUpdateTime: time.Now(),
 	}
 }
@@ -99,8 +97,8 @@ func (o *RaftStateObserver) collectMetrics() (*RaftMetrics, error) {
 	currentAppliedIndex := o.store.GetAppliedIndex()
 	currentTime := time.Now()
 	timeDiff := currentTime.Sub(o.lastUpdateTime).Seconds()
-	speed := float64(currentAppliedIndex - o.lastAppliedIndex) / timeDiff
-	
+	speed := float64(currentAppliedIndex-o.lastAppliedIndex) / timeDiff
+
 	// 更新上次的值
 	o.lastAppliedIndex = currentAppliedIndex
 	o.lastUpdateTime = currentTime
